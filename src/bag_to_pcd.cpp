@@ -40,7 +40,7 @@ string get_pcd_dir(string s)
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "lidarCamCalib");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
   nh.param<string>("bag_file", bag_file, "");
   nh.param<string>("pcd_file", pcd_file, "");
   nh.param<string>("lidar_topic", lidar_topic, "/livox/lidar");
