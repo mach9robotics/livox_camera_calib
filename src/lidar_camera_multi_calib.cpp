@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
   R = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
       Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
       Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
-  std::filesystem::create_directories(result_path)
+  std::filesystem::create_directories(result_path);
   std::ofstream outfile(result_path);
   for (int i = 0; i < 3; i++) {
     outfile << R(i, 0) << "," << R(i, 1) << "," << R(i, 2) << "," << T[i]
