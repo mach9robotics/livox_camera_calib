@@ -391,22 +391,22 @@ int main(int argc, char **argv) {
   // ","
   //         << RAD2DEG(adjust_euler[2]) << "," << 0 << "," << 0 << "," << 0
   //         << std::endl;
-  while (ros::ok()) {
-    sensor_msgs::PointCloud2 pub_cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
-        new pcl::PointCloud<pcl::PointXYZRGB>);
-    calibra.colorCloud(calib_params, 5, calibra.image_,
-                       calibra.raw_lidar_cloud_, rgb_cloud);
-    pcl::toROSMsg(*rgb_cloud, pub_cloud);
-    pub_cloud.header.frame_id = "livox";
-    calibra.rgb_cloud_pub_.publish(pub_cloud);
-    sensor_msgs::ImagePtr img_msg =
-        cv_bridge::CvImage(std_msgs::Header(), "bgr8", calibra.image_)
-            .toImageMsg();
-    calibra.image_pub_.publish(img_msg);
-    std::cout << "push enter to publish again" << std::endl;
-    getchar();
-    /* code */
-  }
+  // while (ros::ok()) {
+  //   sensor_msgs::PointCloud2 pub_cloud;
+  //   pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
+  //       new pcl::PointCloud<pcl::PointXYZRGB>);
+  //   calibra.colorCloud(calib_params, 5, calibra.image_,
+  //                      calibra.raw_lidar_cloud_, rgb_cloud);
+  //   pcl::toROSMsg(*rgb_cloud, pub_cloud);
+  //   pub_cloud.header.frame_id = "livox";
+  //   calibra.rgb_cloud_pub_.publish(pub_cloud);
+  //   sensor_msgs::ImagePtr img_msg =
+  //       cv_bridge::CvImage(std_msgs::Header(), "bgr8", calibra.image_)
+  //           .toImageMsg();
+  //   calibra.image_pub_.publish(img_msg);
+  //   std::cout << "push enter to publish again" << std::endl;
+  //   getchar();
+  //   /* code */
+  // }
   return 0;
 }

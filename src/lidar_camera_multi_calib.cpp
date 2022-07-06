@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <opencv2/core/eigen.hpp>
+#include <filesystem>
 
 using namespace std;
 
@@ -190,6 +191,27 @@ void roughCalib(std::vector<Calibration> &calibs, Vector6d &calib_params,
     }
 }
 
+string get_result_dir(string s)
+{
+  // get the pcd directory from pcd file
+  int start_idx = 0;
+  char ch = '/';
+  size_t last_idx;
+  string dir;
+
+  last_idx = s.find_last_of(ch);
+  if (last_idx == string::npos)
+  {
+    ROS_ERROR_STREAM("Invalid pcd directory!");
+  }
+  else
+  {
+    dir = s.substr(start_idx, last_idx-start_idx);
+  }
+  
+  return dir;
+}
+
 int main(int argc, char **argv) {
   ros::init(argc, argv, "lidarCamCalib");
   ros::NodeHandle nh;
@@ -360,6 +382,9 @@ int main(int argc, char **argv) {
   R = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
       Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
       Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
+
+  string result_dir = get_result_dir(result_path);
+  std::filesystem::create_directories(result_dir);
   std::ofstream outfile(result_path);
   for (int i = 0; i < 3; i++) {
     outfile << R(i, 0) << "," << R(i, 1) << "," << R(i, 2) << "," << T[i]
@@ -378,18 +403,19 @@ int main(int argc, char **argv) {
   // ","
   //         << RAD2DEG(adjust_euler[2]) << "," << 0 << "," << 0 << "," << 0
   //         << std::endl;
-  while (ros::ok()) {
-    sensor_msgs::PointCloud2 pub_cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
-        new pcl::PointCloud<pcl::PointXYZRGB>);
-    calibs[0].colorCloud(calib_params, 5, calibs[0].image_,
-                         calibs[0].raw_lidar_cloud_, rgb_cloud);
-    pcl::toROSMsg(*rgb_cloud, pub_cloud);
-    pub_cloud.header.frame_id = "livox";
-    calibs[0].rgb_cloud_pub_.publish(pub_cloud);
-    std::cout << "push enter to publish again" << std::endl;
-    getchar();
-    /* code */
-  }
+  ros::shutdown();
+  // while (ros::ok()) {
+  //   sensor_msgs::PointCloud2 pub_cloud;
+  //   pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
+  //       new pcl::PointCloud<pcl::PointXYZRGB>);
+  //   calibs[0].colorCloud(calib_params, 5, calibs[0].image_,
+  //                        calibs[0].raw_lidar_cloud_, rgb_cloud);
+  //   pcl::toROSMsg(*rgb_cloud, pub_cloud);
+  //   pub_cloud.header.frame_id = "livox";
+  //   calibs[0].rgb_cloud_pub_.publish(pub_cloud);
+  //   // std::cout << "push enter to publish again" << std::endl;
+  //   // getchar();
+  //   /* code */
+  // }
   return 0;
 }
