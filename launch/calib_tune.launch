@@ -1,0 +1,8 @@
+<launch>
+    <rosparam command="load" file="$(find livox_camera_calib)/config/multi_calib.yaml" />
+    
+    <node pkg="livox_camera_calib" type="calib_tune" name="calib_tune" output="screen"/>
+
+    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>
+
+</launch>

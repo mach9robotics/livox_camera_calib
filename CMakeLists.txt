@@ -11,6 +11,7 @@ add_compile_options(-std=c++17)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
+  dynamic_reconfigure
   pcl_conversions
   pcl_ros
   roscpp
@@ -31,6 +32,11 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+generate_dynamic_reconfigure_options(
+  cfg/calib_tune.cfg
+)
+
 catkin_package(
  CATKIN_DEPENDS roscpp rospy std_msgs
 )
@@ -42,9 +48,13 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
+
 add_executable(lidar_camera_calib src/lidar_camera_calib.cpp include/lidar_camera_calib.hpp)
 add_executable(lidar_camera_multi_calib src/lidar_camera_multi_calib.cpp include/lidar_camera_calib.hpp)
 add_executable(bag_to_pcd src/bag_to_pcd.cpp)
+add_executable(calib_tune src/calib_tune.cpp)
+add_dependencies(calib_tune ${PROJECT_NAME}_gencfg)
+
 target_link_libraries(lidar_camera_calib 
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${CERES_LIBRARIES}
 )
@@ -55,4 +65,8 @@ target_link_libraries(lidar_camera_multi_calib
 
 target_link_libraries(bag_to_pcd 
   ${catkin_LIBRARIES}  ${PCL_LIBRARIES}
+)
+
+target_link_libraries(calib_tune
+  ${catkin_LIBRARIES}
 )
