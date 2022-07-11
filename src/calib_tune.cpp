@@ -76,11 +76,11 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
     this->m_canny_grey_thresh = config.grey_threshold;
     this->m_canny_len_thresh = config.len_threshold;
     this->m_curr_exec = config.execuate;
-    // if (this->m_prev_exec != this->m_curr_exec){
-    //     // this->extract_image_edges();
-    //     ROS_WARN("EXEC CHANGED!");
-    //     this->m_prev_exec = this->m_curr_exec;
-    // }
+    if (this->m_prev_exec != this->m_curr_exec){
+        this->extract_image_edges();
+        // ROS_WARN("EXEC CHANGED!");
+        this->m_prev_exec = this->m_curr_exec;
+    }
     // this->extract_image_edges();
     // ROS_INFO("THRESHOLD: %i",this->m_canny_grey_thresh);
 }
@@ -115,13 +115,13 @@ void CalibTune::extract_image_edges(){
     cv::waitKey(0);
 }
 
-void CalibTune::execuate(){
-    // ROS_ERROR("%i, %i",this->m_prev_exec,this->m_curr_exec);
-    if (this->m_prev_exec != this->m_curr_exec){
-        this->extract_image_edges();
-        this->m_prev_exec = this->m_curr_exec;
-    }
-}
+// void CalibTune::execuate(){
+//     // ROS_ERROR("%i, %i",this->m_prev_exec,this->m_curr_exec);
+//     if (this->m_prev_exec != this->m_curr_exec){
+//         this->extract_image_edges();
+//         this->m_prev_exec = this->m_curr_exec;
+//     }
+// }
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "calib_tune");
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     ros::Rate loop_rate(30);
     while (ros::ok())
     {
-        cb.execuate();
+        // cb.execuate();
         ros::spinOnce();
         loop_rate.sleep();
     }
