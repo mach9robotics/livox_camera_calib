@@ -60,6 +60,7 @@ public:
   int line_number_ = 0;
   int color_intensity_threshold_ = 5;
   Eigen::Vector3d adjust_euler_angle_;
+  Calibration(const std::string &image_file, const std::string &pcd_file) {}
   Calibration(const std::string &image_file, const std::string &pcd_file,
               const std::string &calib_config_file);
   void loadImgAndPointcloud(const std::string bag_path,
