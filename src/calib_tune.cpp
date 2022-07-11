@@ -37,24 +37,26 @@ private:
     int m_canny_len_thresh;
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
-    string m_image_path, m_pcd_path;
-    cv::Mat m_image;
-    // cv::Mat* m_edge_image_ptr;
+    // string m_image_path, m_pcd_path;
+    const cv::Mat m_image;
+
     int m_width, m_height;
     bool m_prev_exec = false;
     bool m_curr_exec = false;
 
 };
 
-CalibTune::CalibTune(string image_path, string pcd_path){
+CalibTune::CalibTune(string image_path, string pcd_path) :
+    m_image(cv::imread(image_path, cv::IMREAD_UNCHANGED))
+{
     // setup dynamic reconfiguration
     auto f = boost::bind(&CalibTune::dyncfg_cb, this, _1, _2);
     m_server.setCallback(f);
     // store the image and pcd
-    m_image_path = image_path;
-    this->m_pcd_path = pcd_path;
-    const cv::Mat image;
-    this->m_image =  cv::imread(m_image_path, cv::IMREAD_UNCHANGED);
+    // m_image_path = image_path;
+    // this->m_pcd_path = pcd_path;
+    // const cv::Mat image;
+    // this->m_image =  cv::imread(m_image_path, cv::IMREAD_UNCHANGED);
     this->m_width = this->m_image.cols;
     this->m_height = this->m_image.rows;
 }
