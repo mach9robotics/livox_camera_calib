@@ -102,10 +102,13 @@ void CalibTune::extract_image_edges(){
 
     for (size_t i = 0; i < contours.size(); i++) {
         if (contours[i].size() > this->m_canny_len_thresh) {
-                for (size_t j = 0; j < contours[i].size(); j++) {
-                    cv::Point p(contours[i][j].y, contours[i][j].x);
-                    edge_img.at<uchar>(p) = 255;
-                }
+            for (size_t j = 0; j < contours[i].size(); j++) {
+                pcl::PointXYZ p;
+                p.x = contours[i][j].x;
+                p.y = -contours[i][j].y;
+                p.z = 0;
+                edge_img.at<uchar>(-p.y, p.x) = 255;
+            }
         }
     }
     cv::imshow("image edge result", edge_img);
@@ -113,7 +116,7 @@ void CalibTune::extract_image_edges(){
 }
 
 void CalibTune::execuate(){
-    ROS_ERROR("%i, %i",this->m_prev_exec,this->m_curr_exec);
+    // ROS_ERROR("%i, %i",this->m_prev_exec,this->m_curr_exec);
     if (this->m_prev_exec != this->m_curr_exec){
         this->extract_image_edges();
         this->m_prev_exec = this->m_curr_exec;
@@ -126,8 +129,7 @@ int main(int argc, char *argv[]) {
     string pcd_path = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     CalibTune cb = CalibTune(image_path, pcd_path);
     cb.show_image();
-    // cb.execuate();
-    // ros::spin();
+
     ros::Rate loop_rate(30);
     while (ros::ok())
     {
