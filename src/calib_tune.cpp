@@ -17,6 +17,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <Eigen/Core>
 
 using namespace std;
 
@@ -27,7 +28,8 @@ public:
     void show_image();
     void extract_image_edges();
     void extract_pcd_edges();
-    void execuate();
+    void init_voxel(unordered_map<VOXEL_LOC, Voxel *> &voxel_map);
+    void publish_cloud();
 
 private:
     void dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level);
@@ -35,13 +37,18 @@ private:
 private:
     int m_canny_grey_thresh;
     int m_canny_len_thresh;
+    float m_voxel_size;
+    int m_width, m_height;
+    bool m_prev_exec = false;
+    bool m_curr_exec = false;
+    sensor_msgs::PointCloud2 m_pub_cloud;
+
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
     const cv::Mat m_image;
     pcl::PointCloud<pcl::PointXYZI>::Ptr m_raw_cloud;
-    int m_width, m_height;
-    bool m_prev_exec = false;
-    bool m_curr_exec = false;
+    ros::Publisher m_rgb_cloud_pub = 
+        m_nh.advertise<sensor_msgs::PointCloud2>("rgb_cloud", 1);
 
 };
 
@@ -86,14 +93,12 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
               config.execuate?"True":"False");
     this->m_canny_grey_thresh = config.grey_threshold;
     this->m_canny_len_thresh = config.len_threshold;
+    this->m_voxel_size = config.voxel_size;
     this->m_curr_exec = config.execuate;
     if (this->m_prev_exec != this->m_curr_exec){
         this->extract_image_edges();
-        // ROS_WARN("EXEC CHANGED!");
         this->m_prev_exec = this->m_curr_exec;
     }
-    // this->extract_image_edges();
-    // ROS_INFO("THRESHOLD: %i",this->m_canny_grey_thresh);
 }
 
 void CalibTune::extract_image_edges(){
@@ -126,20 +131,74 @@ void CalibTune::extract_image_edges(){
     cv::waitKey(0);
 }
 
-// void CalibTune::execuate(){
-//     // ROS_ERROR("%i, %i",this->m_prev_exec,this->m_curr_exec);
-//     if (this->m_prev_exec != this->m_curr_exec){
-//         this->extract_image_edges();
-//         this->m_prev_exec = this->m_curr_exec;
-//     }
-// }
+void CalibTune::init_voxel(unordered_map<VOXEL_LOC, Voxel *> &voxel_map){
+    ROS_INFO_STREAM("Building Voxel");
+    // voxel test
+    srand((unsigned)time(NULL));
+    pcl::PointCloud<pcl::PointXYZRGB> test_cloud;
+    for (size_t i = 0; i < m_raw_cloud->size(); i++) {
+        const pcl::PointXYZI& p_c = m_raw_cloud->points[i];
+        float loc_xyz[3];
+        for (int j = 0; j < 3; j++){
+            loc_xyz[j] = p_c.data[j] / m_voxel_size;
+            if (loc_xyz[j] < 0) {
+                loc_xyz[j] -= 1.0;
+            }
+        }
+        VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1],
+                            (int64_t)loc_xyz[2]);
+        auto iter = voxel_map.find(position);
+        if (iter != voxel_map.end()) {
+            voxel_map[position]->cloud->push_back(p_c);
+            pcl::PointXYZRGB p_rgb;
+            p_rgb.x = p_c.x;
+            p_rgb.y = p_c.y;
+            p_rgb.z = p_c.z;
+            p_rgb.r = voxel_map[position]->voxel_color(0);
+            p_rgb.g = voxel_map[position]->voxel_color(1);
+            p_rgb.b = voxel_map[position]->voxel_color(2);
+            test_cloud.push_back(p_rgb);
+        }
+        else{
+            Voxel* voxel = new Voxel(m_voxel_size);
+            voxel_map[position] = voxel;
+            voxel_map[position]->voxel_origin[0] = position.x * m_voxel_size;
+            voxel_map[position]->voxel_origin[1] = position.y * m_voxel_size;
+            voxel_map[position]->voxel_origin[2] = position.z * m_voxel_size;
+            voxel_map[position]->cloud->push_back(p_c);
+            int r = rand() % 256;
+            int g = rand() % 256;
+            int b = rand() % 256;
+            voxel_map[position]->voxel_color<< r, g, b;
+        }
+    }
+    // test color cloud
+    // sensor_msgs::PointCloud2 pub_cloud;
+    pcl::toROSMsg(test_cloud, m_pub_cloud);
+    m_pub_cloud.header.frame_id = "world";
+    // m_rgb_cloud_pub.publish(pub_cloud);
+}
+
+void CalibTune::extract_pcd_edges(){
+    Eigen::Vector3d lwh(50, 50, 30);
+    Eigen::Vector3d origin(0, -25, -10);
+    vector<VoxelGrid> voxel_list;
+    unordered_map<VOXEL_LOC, Voxel*> voxel_map;
+    init_voxel(voxel_map);
+}
+
+void CalibTune::publish_cloud() {
+    m_rgb_cloud_pub.publish(m_pub_cloud);
+}
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "calib_tune");
     string image_path = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
     string pcd_path = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     CalibTune cb = CalibTune(image_path, pcd_path);
-    cb.show_image();
+    // cb.show_image();
+    cb.extract_pcd_edges();
+    cb.publish_cloud();
 
     ros::Rate loop_rate(30);
     while (ros::ok())
