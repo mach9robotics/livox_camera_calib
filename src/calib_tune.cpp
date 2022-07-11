@@ -30,10 +30,10 @@ public:
                 // setup dynamic reconfiguration
                 auto f = boost::bind(&CalibTune::dyncfg_cb, this, _1, _2);
                 this->m_server.setCallback(f);
-                this->m_width = this->image_.cols;
-                this->m_height = this->image_.rows;
                 // load image
                 image_ = cv::imread(image_file, cv::IMREAD_UNCHANGED);
+                this->m_width = this->image_.cols;
+                this->m_height = this->image_.rows;
                 // load point cloud
                 this->raw_lidar_cloud_ = 
                     pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
