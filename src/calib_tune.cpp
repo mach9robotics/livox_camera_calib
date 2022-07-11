@@ -37,9 +37,8 @@ private:
     int m_canny_len_thresh;
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
-    // string m_image_path, m_pcd_path;
     const cv::Mat m_image;
-
+    pcl::PointCloud<pcl::PointXYZI>::Ptr m_raw_cloud;
     int m_width, m_height;
     bool m_prev_exec = false;
     bool m_curr_exec = false;
@@ -51,22 +50,32 @@ CalibTune::CalibTune(string image_path, string pcd_path) :
 {
     // setup dynamic reconfiguration
     auto f = boost::bind(&CalibTune::dyncfg_cb, this, _1, _2);
-    m_server.setCallback(f);
-    // store the image and pcd
-    // m_image_path = image_path;
-    // this->m_pcd_path = pcd_path;
-    // const cv::Mat image;
-    // this->m_image =  cv::imread(m_image_path, cv::IMREAD_UNCHANGED);
+    this->m_server.setCallback(f);
     this->m_width = this->m_image.cols;
     this->m_height = this->m_image.rows;
+    // load point cloud
+    this->m_raw_cloud = 
+        pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+    ROS_INFO_STREAM("Loading point cloud from pcd file.");
+    auto load_result = pcl::io::loadPCDFile(pcd_path, *m_raw_cloud);
+    ROS_INFO("Load result: %i", load_result);
+    if(load_result == 0){
+        string msg = "Successfully load pcd, pointcloud size: " + 
+                    to_string(m_raw_cloud->size());
+        ROS_INFO_STREAM(msg.c_str());
+    }
+    else{
+        string msg = "Unable to load" + pcd_path;
+        ROS_ERROR_STREAM(msg.c_str());
+        exit(-1);
+    }
+    
 }
 
 
 void CalibTune::show_image(){
-    // cv::namedWindow("Original Image",cv::WINDOW_AUTOSIZE);
     cv::imshow("Original Image",this->m_image);
     cv::waitKey(0);
-    // cv::destroyWindow("Original Image");
 }
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
@@ -135,7 +144,6 @@ int main(int argc, char *argv[]) {
     ros::Rate loop_rate(30);
     while (ros::ok())
     {
-        // cb.execuate();
         ros::spinOnce();
         loop_rate.sleep();
     }
