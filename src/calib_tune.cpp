@@ -73,10 +73,10 @@ private:
 
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
-    ros::Publisher m_rgb_cloud_pub = 
-        m_nh.advertise<sensor_msgs::PointCloud2>("rgb_cloud", 1);
-    ros::Publisher m_plane_cloud_pub = 
-        m_nh.advertise<sensor_msgs::PointCloud2>("plane_cloud", 1);
+    // ros::Publisher m_rgb_cloud_pub = 
+    //     m_nh.advertise<sensor_msgs::PointCloud2>("rgb_cloud", 1);
+    // ros::Publisher m_plane_cloud_pub = 
+    //     m_nh.advertise<sensor_msgs::PointCloud2>("plane_cloud", 1);
 
 };
 
@@ -191,9 +191,13 @@ void CalibTune::extract_pcd_edges(){
     vector<VoxelGrid> voxel_list;
     unordered_map<VOXEL_LOC, Voxel*> voxel_map;
     init_voxel(voxel_map);
-    // const float ransac_dis_thre = 0.015;
-    // const int plane_size_threshold = 60;
-    // ROS_INFO_STREAM("Extracting Lidar Edges");
+    const float ransac_dis_thre = 0.015;
+    const int plane_size_threshold = 60;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidar_line_cloud_3d;
+    ROS_INFO_STREAM("Extracting Lidar Edges");
+    LiDAREdgeExtraction(voxel_map, ransac_dis_thre, plane_size_threshold, lidar_line_cloud_3d);
+
+
     // ros::Rate loop(5000);
     // pcl::PointCloud<pcl::PointXYZI>::Ptr lidar_line_cloud_3d;
     // lidar_line_cloud_3d = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
@@ -238,54 +242,55 @@ void CalibTune::extract_pcd_edges(){
     //             extract.filter(planner_cloud);
 
     //             if (planner_cloud.size() > plane_size_threshold) {
-    //             pcl::PointCloud<pcl::PointXYZRGB> color_cloud;
-    //             std::vector<unsigned int> colors;
-    //             colors.push_back(static_cast<unsigned int>(rand() % 256));
-    //             colors.push_back(static_cast<unsigned int>(rand() % 256));
-    //             colors.push_back(static_cast<unsigned int>(rand() % 256));
-    //             pcl::PointXYZ p_center(0, 0, 0);
-    //             for (size_t i = 0; i < planner_cloud.points.size(); i++) {
-    //                 pcl::PointXYZRGB p;
-    //                 p.x = planner_cloud.points[i].x;
-    //                 p.y = planner_cloud.points[i].y;
-    //                 p.z = planner_cloud.points[i].z;
-    //                 p_center.x += p.x;
-    //                 p_center.y += p.y;
-    //                 p_center.z += p.z;
-    //                 p.r = colors[0];
-    //                 p.g = colors[1];
-    //                 p.b = colors[2];
-    //                 color_cloud.push_back(p);
-    //                 color_planner_cloud.push_back(p);
-    //             }
-    //             p_center.x = p_center.x / planner_cloud.size();
-    //             p_center.y = p_center.y / planner_cloud.size();
-    //             p_center.z = p_center.z / planner_cloud.size();
-    //             Plane single_plane;
-    //             single_plane.cloud = planner_cloud;
-    //             single_plane.p_center = p_center;
-    //             single_plane.normal << coefficients->values[0],
-    //                 coefficients->values[1], coefficients->values[2];
-    //             single_plane.index = plane_index;
-    //             plane_list.push_back(single_plane);
-    //             plane_index++;
+    //                 pcl::PointCloud<pcl::PointXYZRGB> color_cloud;
+    //                 std::vector<unsigned int> colors;
+    //                 colors.push_back(static_cast<unsigned int>(rand() % 256));
+    //                 colors.push_back(static_cast<unsigned int>(rand() % 256));
+    //                 colors.push_back(static_cast<unsigned int>(rand() % 256));
+    //                 pcl::PointXYZ p_center(0, 0, 0);
+    //                 for (size_t i = 0; i < planner_cloud.points.size(); i++) {
+    //                     pcl::PointXYZRGB p;
+    //                     p.x = planner_cloud.points[i].x;
+    //                     p.y = planner_cloud.points[i].y;
+    //                     p.z = planner_cloud.points[i].z;
+    //                     p_center.x += p.x;
+    //                     p_center.y += p.y;
+    //                     p_center.z += p.z;
+    //                     p.r = colors[0];
+    //                     p.g = colors[1];
+    //                     p.b = colors[2];
+    //                     color_cloud.push_back(p);
+    //                     color_planner_cloud.push_back(p);
+    //                 }
+    //                 p_center.x = p_center.x / planner_cloud.size();
+    //                 p_center.y = p_center.y / planner_cloud.size();
+    //                 p_center.z = p_center.z / planner_cloud.size();
+    //                 Plane single_plane;
+    //                 single_plane.cloud = planner_cloud;
+    //                 single_plane.p_center = p_center;
+    //                 single_plane.normal << coefficients->values[0],
+    //                     coefficients->values[1], coefficients->values[2];
+    //                 single_plane.index = plane_index;
+    //                 plane_list.push_back(single_plane);
+    //                 plane_index++;
     //             }
     //             extract.setNegative(true);
     //             pcl::PointCloud<pcl::PointXYZI> cloud_f;
     //             extract.filter(cloud_f);
     //             *cloud_filter = cloud_f;
     //         }
-    //         // if (plane_list.size() >= 2) {
-    //         //     sensor_msgs::PointCloud2 planner_cloud2;
-    //         //     pcl::toROSMsg(color_planner_cloud, planner_cloud2);
-    //         //     planner_cloud2.header.frame_id = "world";
-    //         //     planner_cloud_pub_.publish(planner_cloud2);
-    //         //     loop.sleep();
-    //         // }
-
+    //         if (plane_list.size() >= 2) {
+    //             sensor_msgs::PointCloud2 planner_cloud2;
+    //             pcl::toROSMsg(color_planner_cloud, planner_cloud2);
+    //             planner_cloud2.header.frame_id = "world";
+    //             planner_cloud_pub_.publish(planner_cloud2);
+    //             loop.sleep();
+    //         }
+    //         ROS_WARN("Plane list: %li", plane_list.size());
     //         std::vector<pcl::PointCloud<pcl::PointXYZI>> line_cloud_list;
     //         calcLine(plane_list, m_voxel_size, iter->second->voxel_origin,
     //                 line_cloud_list);
+    //         // ROS_WARN("Line cloud: %li",line_cloud_list.size());
     //         // ouster 5,normal 3
     //         if (line_cloud_list.size() > 0 && line_cloud_list.size() <= 8) {
 
@@ -296,23 +301,25 @@ void CalibTune::extract_pcd_edges(){
     //                 m_plane_line_cloud->points.push_back(p);
     //                 // sensor_msgs::PointCloud2 voxel_cloud;
     //                 // pcl::toROSMsg(line_cloud_list[cloud_index], voxel_cloud);
-    //                 // voxel_cloud.header.frame_id = "livox";
+    //                 // voxel_cloud.header.frame_id = "world";
     //                 // line_cloud_pub_.publish(voxel_cloud);
     //                 // loop.sleep();
     //                 m_plane_line_number.push_back(m_line_number);
+    //                 ROS_INFO("Line number: %i", m_line_number);
     //             }
     //             m_line_number++;
     //             }
     //         }
     //     }
     // }
+    // ROS_INFO_STREAM("Complete Lidar edge extraction");
 }
 
 void CalibTune::publish_clouds() {
     sensor_msgs::PointCloud2 voxel_cloud;
     pcl::toROSMsg(m_voxel_cloud, voxel_cloud);
     voxel_cloud.header.frame_id = "world";
-    m_rgb_cloud_pub.publish(voxel_cloud);
+    rgb_cloud_pub_.publish(voxel_cloud);
 }
 
 
@@ -323,8 +330,8 @@ int main(int argc, char *argv[]) {
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file);
-    cb.show_image();
-    // cb.extract_pcd_edges();
+    // cb.show_image();
+    cb.extract_pcd_edges();
     // cb.publish_clouds();
 
     ros::Rate loop_rate(30);
