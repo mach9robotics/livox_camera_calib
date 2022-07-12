@@ -25,30 +25,12 @@ class CalibTune: public Calibration {
 public:
 
     CalibTune(const std::string &image_file,
-              const std::string &pcd_file) : 
-              Calibration(image_file, pcd_file){
+              const std::string &pcd_file,
+              const std::string &calib_config_file) : 
+              Calibration(image_file, pcd_file, calib_config_file){
                 // setup dynamic reconfiguration
                 auto f = boost::bind(&CalibTune::dyncfg_cb, this, _1, _2);
                 this->m_server.setCallback(f);
-                // load image
-                image_ = cv::imread(image_file, cv::IMREAD_UNCHANGED);
-                this->m_width = this->image_.cols;
-                this->m_height = this->image_.rows;
-                // load point cloud
-                this->raw_lidar_cloud_ = 
-                    pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
-                ROS_INFO_STREAM("Loading point cloud from pcd file.");
-                auto load_result = pcl::io::loadPCDFile(pcd_file, *raw_lidar_cloud_);
-                if(load_result == 0){
-                    string msg = "Successfully load pcd, pointcloud size: " + 
-                                to_string(raw_lidar_cloud_->size());
-                    ROS_INFO_STREAM(msg.c_str());
-                }
-                else{
-                    string msg = "Unable to load" + pcd_file;
-                    ROS_ERROR_STREAM(msg.c_str());
-                    exit(-1);
-                }
               }
     void show_image();
     void extract_image_edges();
@@ -92,12 +74,15 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
               config.len_threshold,
               config.voxel_size,
               config.execuate?"True":"False");
-    this->m_canny_grey_thresh = config.grey_threshold;
-    this->m_canny_len_thresh = config.len_threshold;
-    this->m_voxel_size = config.voxel_size;
+    this->rgb_canny_threshold_ = config.grey_threshold;
+    this->rgb_edge_minLen_ = config.len_threshold;
+    this->voxel_size_ = config.voxel_size;
     this->m_curr_exec = config.execuate;
     if (this->m_prev_exec != this->m_curr_exec){
-        this->extract_image_edges();
+        cv::Mat edge_image;
+        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+        cv::imshow("image edge result", edge_image);
+        cv::waitKey(0);
         this->m_prev_exec = this->m_curr_exec;
     }
 }
@@ -329,9 +314,9 @@ int main(int argc, char *argv[]) {
     string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
-    CalibTune cb = CalibTune(image_file, pcd_file);
+    CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
     // cb.show_image();
-    cb.extract_pcd_edges();
+    // cb.extract_pcd_edges();
     // cb.publish_clouds();
 
     ros::Rate loop_rate(30);
