@@ -93,17 +93,6 @@ void CalibTune::align_edges(){
                 << this->init_rotation_matrix_);
     ROS_INFO_STREAM("Initial translation:" << this->init_translation_vector_.transpose());
     ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
-    Eigen::Matrix3d R = this->init_rotation_matrix_;
-    Eigen::Vector3d T = this->init_translation_vector_;
-    Eigen::Vector3d euler = R.eulerAngles(2,1,0);
-    calib_params[0] = euler[0];
-    calib_params[1] = euler[1];
-    calib_params[2] = euler[2];
-    calib_params[3] = T[0];
-    calib_params[4] = T[1];
-    calib_params[5] = T[2];
-    // ROS_WARN_STREAM("Calibration 6D parameters:" << calib_params.transpose());
-    ////////////////////////////////////////////////////////////////////////////////////
     std::vector<std::vector<std::vector<pcl::PointXYZI>>> img_pts_container;
     for (int y = 0; y < height_; y++) {
         std::vector<std::vector<pcl::PointXYZI>> row_pts_container;
@@ -137,12 +126,6 @@ void CalibTune::align_edges(){
                     calib_params[4], calib_params[5]);
     // project 3d-points into image view
     std::vector<cv::Point2d> pts_2d;
-    // debug
-    // std::cout << "camera_matrix:" << camera_matrix << std::endl;
-    // std::cout << "distortion_coeff:" << distortion_coeff << std::endl;
-    // std::cout << "r_vec:" << r_vec << std::endl;
-    // std::cout << "t_vec:" << t_vec << std::endl;
-    // std::cout << "pts 3d size:" << pts_3d.size() << std::endl;
     cv::projectPoints(pts_3d, r_vec, t_vec, camera_matrix, distortion_coeff,
                         pts_2d);
     pcl::PointCloud<pcl::PointXYZ>::Ptr line_edge_cloud_2d(
@@ -169,13 +152,10 @@ void CalibTune::align_edges(){
         }
     }
     int dis_threshold = 25;
-
     cv::Mat residual_img =
         getConnectImg(dis_threshold, rgb_egde_cloud_, line_edge_cloud_2d);
     cv::imshow("residual", residual_img);
     cv::waitKey(0);
-
-    ////////////////////////////////////////////
     
 }
 
