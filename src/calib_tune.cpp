@@ -55,7 +55,8 @@ private:
     bool m_prev_exec = false;
     bool m_curr_exec = false;
     unordered_set<uint32_t> m_changes;
-    Eigen::Vector3d m_translation = init_rotation_matrix_.eulerAngles(2,1,0);
+    Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(2,1,0);
+    Eigen::Vector3d m_translation = init_translation_vector_;
 
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
@@ -84,12 +85,12 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->voxel_size_ = config.voxel_size;
     }
     if (level == 3){
-        this->init_translation_vector_[0] = config.translation_x;
-        this->init_translation_vector_[1] = config.translation_y;
-        this->init_translation_vector_[2] = config.translation_z;
-        this->m_translation[0] = config.rotation_z;
-        this->m_translation[1] = config.rotation_y;
-        this->m_translation[2] = config.rotation_x;
+        this->m_translation[0] = config.translation_x;
+        this->m_translation[1] = config.translation_y;
+        this->m_translation[2] = config.translation_z;
+        this->m_rotation[0] = config.rotation_z;
+        this->m_rotation[1] = config.rotation_y;
+        this->m_rotation[2] = config.rotation_x;
         // ROS_INFO_STREAM("Trans: "<<config.translation_x<<" Rot: "<<config.rotation_x);
     }
 
@@ -98,32 +99,39 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         if (m_changes.size() == 0) {}
         else{
             if (m_changes.find(1) != m_changes.end()){
+                ROS_INFO_STREAM("start image edge extraction");
                 cv::Mat edge_image;
                 this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
-                cv::imshow("image edge result", edge_image);
-                cv::waitKey(0);
+                ROS_INFO_STREAM("complete image edge extraction");
+                // cv::imshow("image edge result", edge_image);
+                // cv::waitKey(0);
             }
-
+            if (m_changes.find(2) != m_changes.end()){
+                ROS_INFO_STREAM("start point cloud edge extraction");
+                std::unordered_map<VOXEL_LOC, Voxel *> voxel_map;
+                initVoxel(raw_lidar_cloud_, voxel_size_, voxel_map);
+                LiDAREdgeExtraction(voxel_map, ransac_dis_threshold_, plane_size_threshold_, plane_line_cloud_);
+                ROS_INFO_STREAM("complete point cloud edge extraction");
+            }
+            this->align_edges();
             m_changes.clear();
         }
-        // cv::Mat edge_image;
-        // this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
-        // cv::imshow("image edge result", edge_image);
-        // cv::waitKey(0);
         this->m_prev_exec = this->m_curr_exec;
     }
 }
 
 void CalibTune::align_edges(){
-    Eigen::Vector3d init_euler_angle = this->m_translation;
-    Eigen::Vector3d init_translation = this->init_translation_vector_;
+    Eigen::Vector3d init_euler_angle = this->m_rotation;
+    Eigen::Vector3d init_translation = this->m_translation;
+
+    ROS_WARN_STREAM(init_euler_angle.transpose()<<" "<<init_translation.transpose());
 
     Vector6d calib_params;
     calib_params << init_euler_angle(0), init_euler_angle(1), init_euler_angle(2),
         init_translation(0), init_translation(1), init_translation(2);
-    ROS_INFO_STREAM("Initial rotation matrix:" << std::endl
-                << this->init_rotation_matrix_);
-    ROS_INFO_STREAM("Initial translation:" << this->init_translation_vector_.transpose());
+    // ROS_INFO_STREAM("Initial rotation matrix:" << std::endl
+    //             << this->init_rotation_matrix_);
+    // ROS_INFO_STREAM("Initial translation:" << this->init_translation_vector_.transpose());
     ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
     std::vector<std::vector<std::vector<pcl::PointXYZI>>> img_pts_container;
     for (int y = 0; y < height_; y++) {
@@ -140,7 +148,7 @@ void CalibTune::align_edges(){
         Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
         Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
         Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
-
+    // ROS_WARN_STREAM(plane_line_cloud_->size());
     for (size_t i = 0; i < plane_line_cloud_->size(); i++) {
         pcl::PointXYZI point_3d = plane_line_cloud_->points[i];
         pts_3d.emplace_back(cv::Point3d(point_3d.x, point_3d.y, point_3d.z));
