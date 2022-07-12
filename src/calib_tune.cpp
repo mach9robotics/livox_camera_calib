@@ -18,6 +18,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <Eigen/Core>
+#include <bits/stdc++.h>
 
 using namespace std;
 
@@ -53,6 +54,7 @@ private:
 private:
     bool m_prev_exec = false;
     bool m_curr_exec = false;
+    unordered_set<uint32_t> m_changes;
 
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
@@ -64,16 +66,29 @@ private:
 
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
-    ROS_INFO("Reconfigure Request: %i %i %f %s",
-              config.grey_threshold,
-              config.len_threshold,
-              config.voxel_size,
-              config.execuate?"True":"False");
+    // ROS_INFO("Reconfigure Request: %i %i %f %s",
+    //           config.grey_threshold,
+    //           config.len_threshold,
+    //           config.voxel_size,
+    //           config.execuate?"True":"False");
     ROS_INFO("Level: %i", level);
-    this->rgb_canny_threshold_ = config.grey_threshold;
-    this->rgb_edge_minLen_ = config.len_threshold;
-    this->voxel_size_ = config.voxel_size;
+    m_changes.insert(level);
     this->m_curr_exec = config.execuate;
+    if (level == 1){
+        this->rgb_canny_threshold_ = config.grey_threshold;
+        this->rgb_edge_minLen_ = config.len_threshold;
+    }
+    if (level == 2){
+        this->voxel_size_ = config.voxel_size;
+    }
+    if (level == 3){
+        this->init_translation_vector_[0] = config.translation_x;
+        this->init_translation_vector_[1] = config.translation_y;
+        this->init_translation_vector_[2] = config.translation_z;
+        // ROS_INFO("Trans: %d\nRot: %d",config.translation_x,config.rotation_x);
+
+        ROS_INFO_STREAM("Trans: "<<config.translation_x<<" Rot: "<<config.rotation_x);
+    }
     if (this->m_prev_exec != this->m_curr_exec){
         cv::Mat edge_image;
         this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
