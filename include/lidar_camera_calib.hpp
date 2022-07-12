@@ -533,21 +533,22 @@ cv::Mat Calibration::getConnectImg(
     const int dis_threshold,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &rgb_edge_cloud,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &depth_edge_cloud) {
-  cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
-      new pcl::search::KdTree<pcl::PointXYZ>());
-  pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
-      pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
-      pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-  kdtree->setInputCloud(rgb_edge_cloud);
-  tree_cloud = rgb_edge_cloud;
-  for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
-    cv::Point2d p2(depth_edge_cloud->points[i].x,
-                   -depth_edge_cloud->points[i].y);
-    if (checkFov(p2)) {
-      pcl::PointXYZ p = depth_edge_cloud->points[i];
-      search_cloud->points.push_back(p);
+      cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
+      cv::cvtColor(image_,connect_img, CV_GRAY2BGR);
+      pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
+          new pcl::search::KdTree<pcl::PointXYZ>());
+      pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
+          pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+      pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
+          pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+      kdtree->setInputCloud(rgb_edge_cloud);
+      tree_cloud = rgb_edge_cloud;
+      for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
+        cv::Point2d p2(depth_edge_cloud->points[i].x,
+                      -depth_edge_cloud->points[i].y);
+        if (checkFov(p2)) {
+          pcl::PointXYZ p = depth_edge_cloud->points[i];
+          search_cloud->points.push_back(p);
     }
   }
 

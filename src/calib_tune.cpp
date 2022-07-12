@@ -69,6 +69,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
               config.len_threshold,
               config.voxel_size,
               config.execuate?"True":"False");
+    ROS_INFO("Level: %i", level);
     this->rgb_canny_threshold_ = config.grey_threshold;
     this->rgb_edge_minLen_ = config.len_threshold;
     this->voxel_size_ = config.voxel_size;
@@ -166,6 +167,9 @@ int main(int argc, char *argv[]) {
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
+    // cv::imshow("original image",cb.image_);
+    // cv::waitKey(0);
+    ROS_INFO("Complete image and point cloud edge extractions!");
     cb.align_edges();
 
 
