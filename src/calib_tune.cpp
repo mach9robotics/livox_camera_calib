@@ -55,6 +55,7 @@ private:
     bool m_prev_exec = false;
     bool m_curr_exec = false;
     unordered_set<uint32_t> m_changes;
+    Eigen::Vector3d m_translation = init_rotation_matrix_.eulerAngles(2,1,0);
 
     ros::NodeHandle m_nh;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
@@ -73,6 +74,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
     //           config.execuate?"True":"False");
     ROS_INFO("Level: %i", level);
     m_changes.insert(level);
+    // set values
     this->m_curr_exec = config.execuate;
     if (level == 1){
         this->rgb_canny_threshold_ = config.grey_threshold;
@@ -85,21 +87,35 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->init_translation_vector_[0] = config.translation_x;
         this->init_translation_vector_[1] = config.translation_y;
         this->init_translation_vector_[2] = config.translation_z;
-        // ROS_INFO("Trans: %d\nRot: %d",config.translation_x,config.rotation_x);
-
-        ROS_INFO_STREAM("Trans: "<<config.translation_x<<" Rot: "<<config.rotation_x);
+        this->m_translation[0] = config.rotation_z;
+        this->m_translation[1] = config.rotation_y;
+        this->m_translation[2] = config.rotation_x;
+        // ROS_INFO_STREAM("Trans: "<<config.translation_x<<" Rot: "<<config.rotation_x);
     }
+
+    // execuate and show residual image
     if (this->m_prev_exec != this->m_curr_exec){
-        cv::Mat edge_image;
-        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
-        cv::imshow("image edge result", edge_image);
-        cv::waitKey(0);
+        if (m_changes.size() == 0) {}
+        else{
+            if (m_changes.find(1) != m_changes.end()){
+                cv::Mat edge_image;
+                this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+                cv::imshow("image edge result", edge_image);
+                cv::waitKey(0);
+            }
+
+            m_changes.clear();
+        }
+        // cv::Mat edge_image;
+        // this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+        // cv::imshow("image edge result", edge_image);
+        // cv::waitKey(0);
         this->m_prev_exec = this->m_curr_exec;
     }
 }
 
 void CalibTune::align_edges(){
-    Eigen::Vector3d init_euler_angle = this->init_rotation_matrix_.eulerAngles(2,1,0);
+    Eigen::Vector3d init_euler_angle = this->m_translation;
     Eigen::Vector3d init_translation = this->init_translation_vector_;
 
     Vector6d calib_params;
