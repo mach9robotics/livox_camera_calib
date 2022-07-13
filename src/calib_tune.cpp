@@ -19,6 +19,7 @@
 #include <opencv2/highgui.hpp>
 #include <Eigen/Core>
 #include <bits/stdc++.h>
+#include <filesystem>
 
 using namespace std;
 
@@ -45,13 +46,17 @@ public:
         p1_ = m_dist_coeffs[2];
         p2_ = m_dist_coeffs[3];
         k3_ = m_dist_coeffs[4];
+        // set config file
+        m_config_file = calib_config_file;
         }
     void align_edges();
+    void save_config_file(string& file_path);
 
 private:
     void dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level);
 
 private:
+    string m_config_file;
     bool m_prev_exec = false;
     bool m_curr_exec = false;
     unordered_set<uint32_t> m_changes;
@@ -68,11 +73,7 @@ private:
 
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
-    // ROS_INFO("Reconfigure Request: %i %i %f %s",
-    //           config.grey_threshold,
-    //           config.len_threshold,
-    //           config.voxel_size,
-    //           config.execuate?"True":"False");
+
     ROS_INFO("Level: %i", level);
     m_changes.insert(level);
     // set values
@@ -91,7 +92,6 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_rotation[0] = config.rotation_z;
         this->m_rotation[1] = config.rotation_y;
         this->m_rotation[2] = config.rotation_x;
-        // ROS_INFO_STREAM("Trans: "<<config.translation_x<<" Rot: "<<config.rotation_x);
     }
 
     // execuate and show residual image
@@ -129,9 +129,6 @@ void CalibTune::align_edges(){
     Vector6d calib_params;
     calib_params << init_euler_angle(0), init_euler_angle(1), init_euler_angle(2),
         init_translation(0), init_translation(1), init_translation(2);
-    // ROS_INFO_STREAM("Initial rotation matrix:" << std::endl
-    //             << this->init_rotation_matrix_);
-    // ROS_INFO_STREAM("Initial translation:" << this->init_translation_vector_.transpose());
     ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
     std::vector<std::vector<std::vector<pcl::PointXYZI>>> img_pts_container;
     for (int y = 0; y < height_; y++) {
@@ -148,7 +145,6 @@ void CalibTune::align_edges(){
         Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
         Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
         Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
-    // ROS_WARN_STREAM(plane_line_cloud_->size());
     for (size_t i = 0; i < plane_line_cloud_->size(); i++) {
         pcl::PointXYZI point_3d = plane_line_cloud_->points[i];
         pts_3d.emplace_back(cv::Point3d(point_3d.x, point_3d.y, point_3d.z));
@@ -196,27 +192,42 @@ void CalibTune::align_edges(){
         getConnectImg(dis_threshold, rgb_egde_cloud_, line_edge_cloud_2d);
     cv::imshow("residual", residual_img);
     cv::waitKey(0);
-    
+}
+
+void save_config_file(string& file_path_to, string& file_path_from) {
+    // check directory
+    string file_dir = file_path_to.substr(0, file_path_to.find_last_of("/"));
+    if (!filesystem::exists(file_dir)){
+        filesystem::create_directories(file_dir);
+    }
+    // check file
+    if (filesystem::exists(file_path_to)){
+        ROS_INFO_STREAM("File exists, may overwrite the file");
+    }
+    else{
+        filesystem::copy_file(file_path_from, file_path_to);
+        ROS_INFO_STREAM("File doesn't exist, copied from original config file");
+    }
 }
 
 
 int main(int argc, char *argv[]) {
-    ros::init(argc, argv, "calib_tune");
+    // ros::init(argc, argv, "calib_tune");
     string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
-    CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
-    // cv::imshow("original image",cb.image_);
-    // cv::waitKey(0);
-    ROS_INFO("Complete image and point cloud edge extractions!");
-    cb.align_edges();
+    string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/config_update.yaml";
+    // CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
+    // ROS_INFO("Complete initial image and point cloud edge extractions!");
+    // cb.align_edges();
+    // ROS_INFO("Complete initial residual image!");
+    save_config_file(save_path,calib_config_file);
 
-
-    ros::Rate loop_rate(30);
-    while (ros::ok())
-    {
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
+    // ros::Rate loop_rate(30);
+    // while (ros::ok())
+    // {
+    //     ros::spinOnce();
+    //     loop_rate.sleep();
+    // }
     return 0;
 }
