@@ -22,6 +22,7 @@
 #include <filesystem>
 
 using namespace std;
+using namespace cv;
 
 class CalibTune: public Calibration {
 public:
@@ -73,7 +74,6 @@ private:
 
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
-
     ROS_INFO("Level: %i", level);
     m_changes.insert(level);
     // set values
@@ -205,9 +205,23 @@ void save_config_file(string& file_path_to, string& file_path_from) {
         ROS_INFO_STREAM("File exists, may overwrite the file");
     }
     else{
-        filesystem::copy_file(file_path_from, file_path_to);
-        ROS_INFO_STREAM("File doesn't exist, copied from original config file");
+        // filesystem::copy_file(file_path_from, file_path_to);
+        std::ofstream ofs(file_path_to);
+        ofs<< "new file" << endl;
+        ofs.close();
+        ROS_INFO_STREAM("File doesn't exist, create the file");
     }
+    // write config file
+    cv::FileStorage fs;
+    fs.open(file_path_to, cv::FileStorage::WRITE);
+    // values that don't have to change
+    fs << "PointCloudTopic" << "/livox/lidar";
+    fs << "ImageTopic" << "/camera/color/image_raw";
+    fs << "Data_custom_msg" << 1;
+
+
+
+    fs.release();
 }
 
 

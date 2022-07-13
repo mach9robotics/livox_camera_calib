@@ -261,22 +261,22 @@ bool Calibration::loadCalibConfig(const std::string &config_file) {
       init_extrinsic_.at<double>(2, 1), init_extrinsic_.at<double>(2, 2);
   init_translation_vector_ << init_extrinsic_.at<double>(0, 3),
       init_extrinsic_.at<double>(1, 3), init_extrinsic_.at<double>(2, 3);
-  rgb_canny_threshold_ = fSettings["Canny.gray_threshold"];
-  rgb_edge_minLen_ = fSettings["Canny.len_threshold"];
-  voxel_size_ = fSettings["Voxel.size"];
-  down_sample_size_ = fSettings["Voxel.down_sample_size"];
-  plane_size_threshold_ = fSettings["Plane.min_points_size"];
-  plane_max_size_ = fSettings["Plane.max_size"];
-  ransac_dis_threshold_ = fSettings["Ransac.dis_threshold"];
-  min_line_dis_threshold_ = fSettings["Edge.min_dis_threshold"];
-  max_line_dis_threshold_ = fSettings["Edge.max_dis_threshold"];
-  theta_min_ = fSettings["Plane.normal_theta_min"];
-  theta_max_ = fSettings["Plane.normal_theta_max"];
+  rgb_canny_threshold_ = fSettings["Canny_gray_threshold"];
+  rgb_edge_minLen_ = fSettings["Canny_len_threshold"];
+  voxel_size_ = fSettings["Voxel_size"];
+  down_sample_size_ = fSettings["Voxel_down_sample_size"];
+  plane_size_threshold_ = fSettings["Plane_min_points_size"];
+  plane_max_size_ = fSettings["Plane_max_size"];
+  ransac_dis_threshold_ = fSettings["Ransac_dis_threshold"];
+  min_line_dis_threshold_ = fSettings["Edge_min_dis_threshold"];
+  max_line_dis_threshold_ = fSettings["Edge_max_dis_threshold"];
+  theta_min_ = fSettings["Plane_normal_theta_min"];
+  theta_max_ = fSettings["Plane_normal_theta_max"];
   theta_min_ = cos(DEG2RAD(theta_min_));
   theta_max_ = cos(DEG2RAD(theta_max_));
   direction_theta_min_ = cos(DEG2RAD(30.0));
   direction_theta_max_ = cos(DEG2RAD(150.0));
-  color_intensity_threshold_ = fSettings["Color.intensity_threshold"];
+  color_intensity_threshold_ = fSettings["Color_intensity_threshold"];
   return true;
 };
 
