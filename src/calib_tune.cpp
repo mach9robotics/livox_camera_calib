@@ -47,8 +47,8 @@ public:
         p1_ = m_dist_coeffs[2];
         p2_ = m_dist_coeffs[3];
         k3_ = m_dist_coeffs[4];
-        // set config file
-        m_config_file = calib_config_file;
+
+        align_edges();
         }
     void align_edges();
     void save_config_file(string& file_path);
@@ -57,9 +57,10 @@ private:
     void dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level);
 
 private:
-    string m_config_file;
+    string m_save_path;
     bool m_prev_exec = false;
-    bool m_curr_exec = false;
+    // bool m_curr_exec = false;
+    bool m_prev_save = false;
     unordered_set<uint32_t> m_changes;
     Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(2,1,0);
     Eigen::Vector3d m_translation = init_translation_vector_;
@@ -74,10 +75,11 @@ private:
 
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
-    ROS_INFO("Level: %i", level);
+    // ROS_INFO("Level: %i", level);
     m_changes.insert(level);
     // set values
-    this->m_curr_exec = config.execuate;
+    this->m_save_path = config.save_path;
+    // this->m_curr_exec = config.execuate;
     if (level == 1){
         this->rgb_canny_threshold_ = config.grey_threshold;
         this->rgb_edge_minLen_ = config.len_threshold;
@@ -93,10 +95,13 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_rotation[1] = config.rotation_y;
         this->m_rotation[2] = config.rotation_x;
     }
+    if (level == 4){
+        this->m_save_path = config.save_path;
+    }
 
     // execuate and show residual image
-    if (this->m_prev_exec != this->m_curr_exec){
-        if (m_changes.size() == 0) {}
+    if (this->m_prev_exec != config.execuate){
+        if (m_changes.size() == 0 || (m_changes.size() == 1 && m_changes.find(0) != m_changes.end())) {}
         else{
             if (m_changes.find(1) != m_changes.end()){
                 ROS_INFO_STREAM("start image edge extraction");
@@ -116,7 +121,12 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
             this->align_edges();
             m_changes.clear();
         }
-        this->m_prev_exec = this->m_curr_exec;
+        this->m_prev_exec = config.execuate;
+    }
+    // save config file
+    if (this->m_prev_save != config.save){
+        this->save_config_file(this->m_save_path);
+        this->m_prev_exec = config.save;
     }
 }
 
@@ -124,12 +134,12 @@ void CalibTune::align_edges(){
     Eigen::Vector3d init_euler_angle = this->m_rotation;
     Eigen::Vector3d init_translation = this->m_translation;
 
-    ROS_WARN_STREAM(init_euler_angle.transpose()<<" "<<init_translation.transpose());
+    // ROS_WARN_STREAM(init_euler_angle.transpose()<<" "<<init_translation.transpose());
 
     Vector6d calib_params;
     calib_params << init_euler_angle(0), init_euler_angle(1), init_euler_angle(2),
         init_translation(0), init_translation(1), init_translation(2);
-    ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
+    // ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
     std::vector<std::vector<std::vector<pcl::PointXYZI>>> img_pts_container;
     for (int y = 0; y < height_; y++) {
         std::vector<std::vector<pcl::PointXYZI>> row_pts_container;
@@ -224,7 +234,7 @@ void CalibTune::save_config_file(string& file_path) {
                                                   rot(1,0), rot(1,1), rot(1,2), m_translation[1],
                                                   rot(2,0), rot(2,1), rot(2,2), m_translation[2],
                                                   0.0, 0.0, 0.0, 1.0);
-    ROS_INFO_STREAM("Extrinsic:"<< endl << extrinsic);
+    // ROS_INFO_STREAM("Extrinsic:"<< endl << extrinsic);
     // write config file
     cv::FileStorage fs;
     fs.open(file_path, cv::FileStorage::WRITE);
@@ -257,18 +267,18 @@ int main(int argc, char *argv[]) {
     string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
-    string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/config_update.yaml";
+    string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
     // ROS_INFO("Complete initial image and point cloud edge extractions!");
     // cb.align_edges();
     // ROS_INFO("Complete initial residual image!");
     cb.save_config_file(save_path);
 
-    // ros::Rate loop_rate(30);
-    // while (ros::ok())
-    // {
-    //     ros::spinOnce();
-    //     loop_rate.sleep();
-    // }
+    ros::Rate loop_rate(30);
+    while (ros::ok())
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
     return 0;
 }
