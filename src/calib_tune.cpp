@@ -194,31 +194,58 @@ void CalibTune::align_edges(){
     cv::waitKey(0);
 }
 
-void save_config_file(string& file_path_to, string& file_path_from) {
+void CalibTune::save_config_file(string& file_path) {
     // check directory
-    string file_dir = file_path_to.substr(0, file_path_to.find_last_of("/"));
+    string file_dir = file_path.substr(0, file_path.find_last_of("/"));
     if (!filesystem::exists(file_dir)){
         filesystem::create_directories(file_dir);
     }
     // check file
-    if (filesystem::exists(file_path_to)){
+    if (filesystem::exists(file_path)){
         ROS_INFO_STREAM("File exists, may overwrite the file");
     }
     else{
-        // filesystem::copy_file(file_path_from, file_path_to);
-        std::ofstream ofs(file_path_to);
+        std::ofstream ofs(file_path);
         ofs<< "new file" << endl;
         ofs.close();
         ROS_INFO_STREAM("File doesn't exist, create the file");
     }
+    // calculate updated rotation matrix 
+    Eigen::AngleAxisd rollAngle(m_rotation[0], Eigen::Vector3d::UnitZ());
+    Eigen::AngleAxisd yawAngle(m_rotation[1], Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd pitchAngle(m_rotation[2], Eigen::Vector3d::UnitX());
+
+    Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+
+    Eigen::Matrix3d rot = q.matrix();
+
+    // ROS_INFO_STREAM("Rotation:"<< endl << rotationMatrix);
+    cv::Mat extrinsic = (cv::Mat_<double>(4,4) << rot(0,0), rot(0,1), rot(0,2), m_translation[0],
+                                                  rot(1,0), rot(1,1), rot(1,2), m_translation[1],
+                                                  rot(2,0), rot(2,1), rot(2,2), m_translation[2],
+                                                  0.0, 0.0, 0.0, 1.0);
+    ROS_INFO_STREAM("Extrinsic:"<< endl << extrinsic);
     // write config file
     cv::FileStorage fs;
-    fs.open(file_path_to, cv::FileStorage::WRITE);
-    // values that don't have to change
+    fs.open(file_path, cv::FileStorage::WRITE);
     fs << "PointCloudTopic" << "/livox/lidar";
     fs << "ImageTopic" << "/camera/color/image_raw";
     fs << "Data_custom_msg" << 1;
-
+    fs << "ExtrinsicMat" << extrinsic;
+    fs << "Canny_gray_threshold" << rgb_canny_threshold_;
+    fs << "Canny_len_threshold" << rgb_edge_minLen_;
+    fs << "Voxel_size" << voxel_size_;
+    fs << "Voxel_down_sample_size" << 0.02;
+    fs << "Plane_min_points_size" << 60;
+    fs << "Plane_normal_theta_min" << 30;
+    fs << "Plane_normal_theta_max" << 150;
+    fs << "Plane_max_size" << 5;
+    fs << "Ransac_dis_threshold" << 0.015;
+    fs << "Ransac_iter_num" << 200;
+    fs << "Edge_min_dis_threshold" << 0.03;
+    fs << "Edge_max_dis_threshold" << 0.06;
+    fs << "Color_dense" << 1;
+    fs << "Color_intensity_threshold" << 10;
 
 
     fs.release();
@@ -226,16 +253,16 @@ void save_config_file(string& file_path_to, string& file_path_from) {
 
 
 int main(int argc, char *argv[]) {
-    // ros::init(argc, argv, "calib_tune");
+    ros::init(argc, argv, "calib_tune");
     string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
     string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
     string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/config_update.yaml";
-    // CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
+    CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
     // ROS_INFO("Complete initial image and point cloud edge extractions!");
     // cb.align_edges();
     // ROS_INFO("Complete initial residual image!");
-    save_config_file(save_path,calib_config_file);
+    cb.save_config_file(save_path);
 
     // ros::Rate loop_rate(30);
     // while (ros::ok())
