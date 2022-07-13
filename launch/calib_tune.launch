@@ -9,7 +9,8 @@
     <node pkg="livox_camera_calib" type="calib_tune" name="calib_tune" output="screen" 
     unless = "$(arg debug)"/>
 
-    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/>
+    <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure"/> -->
+    <node pkg="rqt_gui" type="rqt_gui" name = "calib_tune_gui"/>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find livox_camera_calib)/rviz_cfg/calib.rviz"/>
 
