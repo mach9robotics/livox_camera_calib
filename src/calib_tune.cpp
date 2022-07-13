@@ -17,9 +17,14 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <Eigen/Core>
 #include <bits/stdc++.h>
 #include <filesystem>
+#include <image_transport/image_transport.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+
 
 using namespace std;
 using namespace cv;
@@ -29,10 +34,18 @@ public:
 
     CalibTune(const std::string &image_file,
               const std::string &pcd_file,
-              const std::string &calib_config_file) : 
+              const std::string &calib_config_file) : m_it(m_nh),
               Calibration(image_file, pcd_file, calib_config_file)
         {
-        // setup dynamic reconfiguration
+        // setup publisher
+        m_image_pub = m_it.advertise("/edge_align_image",1);
+        // init image message & setup image header
+        m_image_header.seq = 0;
+        m_image_header.frame_id = "livox";
+        m_image_header.stamp = ros::Time::now();
+        sensor_msgs::ImagePtr pub_image = cv_bridge::CvImage(
+            m_image_header, "bgr8", image_).toImageMsg();
+        m_image_pub.publish(pub_image);
         auto f = boost::bind(&CalibTune::dyncfg_cb, this, _1, _2);
         this->m_server.setCallback(f);
         // get parameters
@@ -64,12 +77,17 @@ private:
     unordered_set<uint32_t> m_changes;
     Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(2,1,0);
     Eigen::Vector3d m_translation = init_translation_vector_;
+    image_transport::Publisher m_image_pub;
+    std_msgs::Header m_image_header;
 
     ros::NodeHandle m_nh;
+    image_transport::ImageTransport m_it;
     dynamic_reconfigure::Server<livox_camera_calib::CalibTuneConfig> m_server;
 
     vector<double> m_camera_matrix;
     vector<double> m_dist_coeffs;
+
+    // sensor_msgs::ImagePtr m_pub_image;
 
 };
 
@@ -94,6 +112,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_rotation[0] = config.rotation_z;
         this->m_rotation[1] = config.rotation_y;
         this->m_rotation[2] = config.rotation_x;
+        this->align_edges();
     }
     if (level == 4){
         this->m_save_path = config.save_path;
@@ -200,8 +219,13 @@ void CalibTune::align_edges(){
     int dis_threshold = 25;
     cv::Mat residual_img =
         getConnectImg(dis_threshold, rgb_egde_cloud_, line_edge_cloud_2d);
-    cv::imshow("residual", residual_img);
-    cv::waitKey(0);
+    // cv::imshow("residual", residual_img);
+    // cv::waitKey(0);
+    m_image_header.seq += 1;
+    m_image_header.stamp = ros::Time::now();
+    sensor_msgs::ImagePtr pub_image = cv_bridge::CvImage(
+        m_image_header, "bgr8", residual_img).toImageMsg();
+    m_image_pub.publish(pub_image);
 }
 
 void CalibTune::save_config_file(string& file_path) {
@@ -211,9 +235,6 @@ void CalibTune::save_config_file(string& file_path) {
         filesystem::create_directories(file_dir);
     }
     // check file
-    if (filesystem::exists(file_path)){
-        ROS_INFO_STREAM("File exists, may overwrite the file");
-    }
     else{
         std::ofstream ofs(file_path);
         ofs<< "new file" << endl;

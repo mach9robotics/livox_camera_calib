@@ -12,6 +12,7 @@ SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   dynamic_reconfigure
+  image_transport
   pcl_conversions
   pcl_ros
   roscpp
