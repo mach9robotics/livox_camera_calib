@@ -74,7 +74,7 @@ private:
     bool m_prev_exec = false;
     bool m_prev_save = false;
     unordered_set<uint32_t> m_changes;
-    Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(2,1,0);
+    Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(0,1,2);
     Eigen::Vector3d m_translation = init_translation_vector_;
     image_transport::Publisher m_image_pub;
     std_msgs::Header m_image_header;
@@ -166,11 +166,13 @@ void CalibTune::align_edges(){
     std::vector<cv::Point3d> pts_3d;
     Eigen::AngleAxisd rotation_vector3;
     rotation_vector3 =
-        Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
+        Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitX()) *
         Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
-        Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
-    ROS_WARN_STREAM("rotation vector: " <<rotation_vector3.matrix().eulerAngles(0,1,2).transpose());
-
+        Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitZ());
+    // ROS_WARN_STREAM("rotation vector: " <<rotation_vector3.matrix().eulerAngles(0,1,2).transpose());
+    ROS_WARN_STREAM("rotation vector (Matrix): "<< endl <<rotation_vector3.matrix()<<endl);
+    // ROS_WARN_STREAM("rotation vector (angle): " <<rotation_vector3.angle());
+    // ROS_WARN_STREAM("rotation vector (axis): " <<rotation_vector3.axis().transpose());
     for (size_t i = 0; i < plane_line_cloud_->size(); i++) {
         pcl::PointXYZI point_3d = plane_line_cloud_->points[i];
         pts_3d.emplace_back(cv::Point3d(point_3d.x, point_3d.y, point_3d.z));
@@ -179,11 +181,15 @@ void CalibTune::align_edges(){
         (cv::Mat_<double>(3, 3) << fx_, 0.0, cx_, 0.0, fy_, cy_, 0.0, 0.0, 1.0);
     cv::Mat distortion_coeff =
         (cv::Mat_<double>(1, 5) << k1_, k2_, p1_, p2_, k3_);
-    cv::Mat r_vec =
-        (cv::Mat_<double>(3, 1)
-            << rotation_vector3.angle() * rotation_vector3.axis().transpose()[0],
-        rotation_vector3.angle() * rotation_vector3.axis().transpose()[1],
-        rotation_vector3.angle() * rotation_vector3.axis().transpose()[2]);
+    // cv::Mat r_vec =
+    //     (cv::Mat_<double>(3, 1)
+    //         << rotation_vector3.angle() * rotation_vector3.axis().transpose()[2],
+    //     rotation_vector3.angle() * rotation_vector3.axis().transpose()[1],
+    //     rotation_vector3.angle() * rotation_vector3.axis().transpose()[0]);
+    auto rm = rotation_vector3.matrix();
+    cv::Mat r_vec = (cv::Mat_<double>(3,3) << rm(0,0), rm(0,1), rm(0,2),
+                                              rm(1,0), rm(1,1), rm(1,2),
+                                              rm(2,0), rm(2,1), rm(2,2));
     cv::Mat t_vec = (cv::Mat_<double>(3, 1) << calib_params[3],
                     calib_params[4], calib_params[5]);
     // project 3d-points into image view
@@ -239,9 +245,9 @@ void CalibTune::save_config_file(string& file_path) {
         ROS_INFO_STREAM("save directory doesn't exist, create the file");
     }
     // calculate updated rotation matrix 
-    Eigen::AngleAxisd rollAngle(m_rotation[0], Eigen::Vector3d::UnitZ());
+    Eigen::AngleAxisd rollAngle(m_rotation[0], Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd yawAngle(m_rotation[1], Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd pitchAngle(m_rotation[2], Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(m_rotation[2], Eigen::Vector3d::UnitZ());
 
     Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
 
