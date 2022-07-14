@@ -94,13 +94,19 @@ private:
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
     // ROS_INFO("Level: %i", level);
-    m_changes.insert(level);
+    if (level == 2) {
+        m_changes.insert(level);
+    }
     // set values
     this->m_save_path = config.save_path;
-    // this->m_curr_exec = config.execuate;
     if (level == 1){
         this->rgb_canny_threshold_ = config.grey_threshold;
         this->rgb_edge_minLen_ = config.len_threshold;
+        ROS_INFO_STREAM("start image edge extraction");
+        cv::Mat edge_image;
+        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+        ROS_INFO_STREAM("complete image edge extraction");
+        this->align_edges();
     }
     if (level == 2){
         this->voxel_size_ = config.voxel_size;
@@ -120,17 +126,8 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
 
     // execuate and show residual image
     if (this->m_prev_exec != config.execuate){
-        if (m_changes.size() == 0 || (m_changes.size() == 1 && m_changes.find(0) != m_changes.end())) {}
-        else{
-            if (m_changes.find(1) != m_changes.end()){
-                ROS_INFO_STREAM("start image edge extraction");
-                cv::Mat edge_image;
-                this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
-                ROS_INFO_STREAM("complete image edge extraction");
-                // cv::imshow("image edge result", edge_image);
-                // cv::waitKey(0);
-            }
-            if (m_changes.find(2) != m_changes.end()){
+        if (m_changes.size()!=0) {
+            if (m_changes.find(2) != m_changes.end()) {
                 ROS_INFO_STREAM("start point cloud edge extraction");
                 std::unordered_map<VOXEL_LOC, Voxel *> voxel_map;
                 initVoxel(raw_lidar_cloud_, voxel_size_, voxel_map);
@@ -239,7 +236,7 @@ void CalibTune::save_config_file(string& file_path) {
         std::ofstream ofs(file_path);
         ofs<< "new file" << endl;
         ofs.close();
-        ROS_INFO_STREAM("File doesn't exist, create the file");
+        ROS_INFO_STREAM("save directory doesn't exist, create the file");
     }
     // calculate updated rotation matrix 
     Eigen::AngleAxisd rollAngle(m_rotation[0], Eigen::Vector3d::UnitZ());
@@ -293,7 +290,7 @@ int main(int argc, char *argv[]) {
     // ROS_INFO("Complete initial image and point cloud edge extractions!");
     // cb.align_edges();
     // ROS_INFO("Complete initial residual image!");
-    cb.save_config_file(save_path);
+    // cb.save_config_file(save_path);
 
     ros::Rate loop_rate(30);
     while (ros::ok())

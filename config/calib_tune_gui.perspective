@@ -140,7 +140,7 @@
                   "type": "repr"
                 },
                 "mouse_pub_topic": {
-                  "repr": "'/edge_align_image'",
+                  "repr": "'/edge_align_image_mouse_left'",
                   "type": "repr"
                 },
                 "num_gridlines": {
@@ -164,7 +164,7 @@
                   "type": "repr"
                 },
                 "topic": {
-                  "repr": "'/edge_align_image/compressed'",
+                  "repr": "'/edge_align_image'",
                   "type": "repr"
                 },
                 "zoom1": {
@@ -262,9 +262,9 @@
                   "type": "repr"
                 },
                 "splitter": {
-                  "repr(QByteArray.hex)": "QtCore.QByteArray(b'000000ff0000000100000002000000ae0000012101ffffffff010000000100')",
+                  "repr(QByteArray.hex)": "QtCore.QByteArray(b'000000ff000000010000000200000000000001e301ffffffff010000000100')",
                   "type": "repr(QByteArray.hex)",
-                  "pretty-print": "         !     "
+                  "pretty-print": "               "
                 },
                 "text": {
                   "repr": "''",
