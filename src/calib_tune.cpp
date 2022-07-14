@@ -72,7 +72,6 @@ private:
 private:
     string m_save_path;
     bool m_prev_exec = false;
-    // bool m_curr_exec = false;
     bool m_prev_save = false;
     unordered_set<uint32_t> m_changes;
     Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(2,1,0);
@@ -86,8 +85,6 @@ private:
 
     vector<double> m_camera_matrix;
     vector<double> m_dist_coeffs;
-
-    // sensor_msgs::ImagePtr m_pub_image;
 
 };
 
@@ -147,15 +144,14 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
 }
 
 void CalibTune::align_edges(){
+    // parse and store 6d pose to calib_params
     Eigen::Vector3d init_euler_angle = this->m_rotation;
     Eigen::Vector3d init_translation = this->m_translation;
-
-    // ROS_WARN_STREAM(init_euler_angle.transpose()<<" "<<init_translation.transpose());
-
     Vector6d calib_params;
     calib_params << init_euler_angle(0), init_euler_angle(1), init_euler_angle(2),
         init_translation(0), init_translation(1), init_translation(2);
-    // ROS_INFO_STREAM("Calibration 6D pose:" << calib_params.transpose());
+
+    // initialize image point container
     std::vector<std::vector<std::vector<pcl::PointXYZI>>> img_pts_container;
     for (int y = 0; y < height_; y++) {
         std::vector<std::vector<pcl::PointXYZI>> row_pts_container;
@@ -165,12 +161,16 @@ void CalibTune::align_edges(){
         }
         img_pts_container.push_back(row_pts_container);
     }
+
+
     std::vector<cv::Point3d> pts_3d;
     Eigen::AngleAxisd rotation_vector3;
     rotation_vector3 =
         Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
         Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
         Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
+    ROS_WARN_STREAM("rotation vector: " <<rotation_vector3.matrix().eulerAngles(0,1,2).transpose());
+
     for (size_t i = 0; i < plane_line_cloud_->size(); i++) {
         pcl::PointXYZI point_3d = plane_line_cloud_->points[i];
         pts_3d.emplace_back(cv::Point3d(point_3d.x, point_3d.y, point_3d.z));
