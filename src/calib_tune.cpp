@@ -67,6 +67,9 @@ public:
         }
     void align_edges();
     void save_config_file(string& file_path);
+    string find_pcd_path(string& image_path);
+    void load_image(string& image_path);
+    void load_cloud(string& pcd_path);
 
 private:
     void dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level);
@@ -75,6 +78,7 @@ private:
     string m_save_path;
     bool m_prev_exec = false;
     bool m_prev_save = false;
+    bool m_prev_load = false;
     unordered_set<uint32_t> m_changes;
     Eigen::Vector3d m_rotation = init_rotation_matrix_.eulerAngles(0,1,2);
     Eigen::Vector3d m_translation = init_translation_vector_;
@@ -88,12 +92,16 @@ private:
     vector<double> m_camera_matrix;
     vector<double> m_dist_coeffs;
 
+    string m_image_path;
+    string m_pcd_path;
+    string m_config_path;
+
 };
 
 
 void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
     // ROS_INFO("Level: %i", level);
-    if (level == 2) {
+    if (level == 2 || level == 5) {
         m_changes.insert(level);
     }
     // set values
@@ -105,7 +113,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         cv::Mat edge_image;
         // cv::Mat grey_image = image_;
         // pcl::PointCloud<pcl::PointXYZ>::Ptr rgb_edge_cloud = rgb_egde_cloud_;
-        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, image_, edge_image, rgb_egde_cloud_);
+        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
         ROS_INFO_STREAM("complete image edge extraction");
         this->align_edges();
     }
@@ -116,14 +124,19 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_translation[0] = config.translation_x;
         this->m_translation[1] = config.translation_y;
         this->m_translation[2] = config.translation_z;
-        this->m_rotation[0] = config.rotation_z;
+        this->m_rotation[0] = config.rotation_x;
         this->m_rotation[1] = config.rotation_y;
-        this->m_rotation[2] = config.rotation_x;
+        this->m_rotation[2] = config.rotation_z;
         this->align_edges();
     }
     if (level == 4){
         this->m_save_path = config.save_path;
     }
+    if (level == 5){
+        this->m_image_path = config.image_path;
+        this->m_config_path = config.config_path;
+        this->m_pcd_path = this->find_pcd_path(this->m_image_path);
+    } 
 
     // execuate and show residual image
     if (this->m_prev_exec != config.execuate){
@@ -144,6 +157,29 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
     if (this->m_prev_save != config.save){
         this->save_config_file(this->m_save_path);
         this->m_prev_exec = config.save;
+    }
+    if (this->m_prev_load != config.load_input){
+        if (m_changes.size()!=0) {
+            if (m_changes.find(5) != m_changes.end()) {
+                this->loadCalibConfig(this->m_config_path);
+                this->m_rotation = this->init_rotation_matrix_.eulerAngles(0,1,2);
+                this->m_translation = this->init_translation_vector_;
+                this->load_image(this->m_image_path);
+                ROS_INFO_STREAM("start image edge extraction");
+                cv::Mat edge_image;
+                this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+                ROS_INFO_STREAM("complete image edge extraction");
+                this->load_cloud(this->m_pcd_path);
+                ROS_INFO_STREAM("start point cloud edge extraction");
+                std::unordered_map<VOXEL_LOC, Voxel *> voxel_map;
+                initVoxel(raw_lidar_cloud_, voxel_size_, voxel_map);
+                LiDAREdgeExtraction(voxel_map, ransac_dis_threshold_, plane_size_threshold_, plane_line_cloud_);
+                ROS_INFO_STREAM("complete point cloud edge extraction");
+            }
+            this->align_edges();
+            m_changes.clear();
+        }
+        this->m_prev_load = config.load_input;
     }
 }
 
@@ -283,11 +319,13 @@ void CalibTune::save_config_file(string& file_path) {
     fs << "Color_dense" << 1;
     fs << "Color_intensity_threshold" << 10;
 
-
     fs.release();
+    ROS_INFO_STREAM("Saved config file to " << file_path);
 }
 
-string find_pcd_path(string& image_path) {
+
+
+string CalibTune::find_pcd_path(string& image_path) {
     vector<string> words_0;
     boost::split(words_0, image_path, boost::is_any_of("/"), boost::token_compress_on);
     words_0[words_0.size()-3] = "pcd";
@@ -300,6 +338,44 @@ string find_pcd_path(string& image_path) {
     return pcd_path;
 }
 
+void CalibTune::load_image(string& image_path) {
+    image_ = cv::imread(image_path, cv::IMREAD_UNCHANGED);
+    if (!image_.data) {
+        std::string msg = "Can not load image from " + image_path;
+        ROS_ERROR_STREAM(msg.c_str());
+        exit(-1);
+    } else {
+        std::string msg = "Sucessfully load image!";
+        ROS_INFO_STREAM(msg.c_str());
+    }
+    width_ = image_.cols;
+    height_ = image_.rows;
+    // check rgb or gray
+    if (image_.type() == CV_8UC1) {
+        grey_image_ = image_;
+    } else if (image_.type() == CV_8UC3) {
+        cv::cvtColor(image_, grey_image_, cv::COLOR_BGR2GRAY);
+    } else {
+        std::string msg = "Unsupported image type, please use CV_8UC3 or CV_8UC1";
+        ROS_ERROR_STREAM(msg.c_str());
+        exit(-1);
+    }
+}
+
+void CalibTune::load_cloud(string& pcd_path) {
+    raw_lidar_cloud_ =
+        pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+    ROS_INFO_STREAM("Loading point cloud from pcd file.");
+    if (!pcl::io::loadPCDFile(pcd_path, *raw_lidar_cloud_)) {
+        std::string msg = "Sucessfully load pcd, pointcloud size: " +
+                            std::to_string(raw_lidar_cloud_->size());
+        ROS_INFO_STREAM(msg.c_str());
+    } else {
+        std::string msg = "Unable to load " + pcd_path;
+        ROS_ERROR_STREAM(msg.c_str());
+        exit(-1);
+    }
+}
 
 
 int main(int argc, char *argv[]) {

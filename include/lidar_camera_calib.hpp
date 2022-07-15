@@ -210,9 +210,9 @@ Calibration::Calibration(const std::string &image_file,
     exit(-1);
   }
 
-  Eigen::Vector3d lwh(50, 50, 30);
-  Eigen::Vector3d origin(0, -25, -10);
-  std::vector<VoxelGrid> voxel_list;
+  // Eigen::Vector3d lwh(50, 50, 30);
+  // Eigen::Vector3d origin(0, -25, -10);
+  // std::vector<VoxelGrid> voxel_list;
   std::unordered_map<VOXEL_LOC, Voxel *> voxel_map;
   initVoxel(raw_lidar_cloud_, voxel_size_, voxel_map);
   LiDAREdgeExtraction(voxel_map, ransac_dis_threshold_, plane_size_threshold_,
