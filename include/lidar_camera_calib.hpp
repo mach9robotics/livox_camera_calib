@@ -355,11 +355,12 @@ void Calibration::edgeDetector(
     const int &canny_threshold, const int &edge_threshold,
     const cv::Mat &src_img, cv::Mat &edge_img,
     pcl::PointCloud<pcl::PointXYZ>::Ptr &edge_cloud) {
+  cv::Mat blur_img = cv::Mat::zeros(height_, width_, CV_8UC1);
   int gaussian_size = 5;
-  cv::GaussianBlur(src_img, src_img, cv::Size(gaussian_size, gaussian_size), 0,
+  cv::GaussianBlur(src_img, blur_img, cv::Size(gaussian_size, gaussian_size), 0,
                    0);
   cv::Mat canny_result = cv::Mat::zeros(height_, width_, CV_8UC1);
-  cv::Canny(src_img, canny_result, canny_threshold, canny_threshold * 3, 3,
+  cv::Canny(blur_img, canny_result, canny_threshold, canny_threshold * 3, 3,
             true);
   std::vector<std::vector<cv::Point>> contours;
   std::vector<cv::Vec4i> hierarchy;

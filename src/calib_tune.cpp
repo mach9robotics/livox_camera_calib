@@ -101,7 +101,9 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->rgb_edge_minLen_ = config.len_threshold;
         ROS_INFO_STREAM("start image edge extraction");
         cv::Mat edge_image;
-        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, grey_image_, edge_image, rgb_egde_cloud_);
+        // cv::Mat grey_image = image_;
+        // pcl::PointCloud<pcl::PointXYZ>::Ptr rgb_edge_cloud = rgb_egde_cloud_;
+        this->edgeDetector(rgb_canny_threshold_, rgb_edge_minLen_, image_, edge_image, rgb_egde_cloud_);
         ROS_INFO_STREAM("complete image edge extraction");
         this->align_edges();
     }
@@ -237,13 +239,11 @@ void CalibTune::save_config_file(string& file_path) {
     if (!filesystem::exists(file_dir)){
         filesystem::create_directories(file_dir);
     }
-    // check file
-    else{
-        std::ofstream ofs(file_path);
-        ofs<< "new file" << endl;
-        ofs.close();
-        ROS_INFO_STREAM("save directory doesn't exist, create the file");
-    }
+
+    std::ofstream ofs(file_path);
+    ofs<< "new file" << endl;
+    ofs.close();
+
     // calculate updated rotation matrix 
     Eigen::AngleAxisd rollAngle(m_rotation[0], Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd yawAngle(m_rotation[1], Eigen::Vector3d::UnitY());
@@ -288,8 +288,8 @@ void CalibTune::save_config_file(string& file_path) {
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "calib_tune");
-    string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
-    string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
+    string image_file = "/tmp/mach9/auto_mlcc/image/back/4.bmp";
+    string pcd_file = "/tmp/mach9/auto_mlcc/pcd/back/4.pcd";
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
     string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
