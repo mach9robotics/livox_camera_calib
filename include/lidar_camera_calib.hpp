@@ -60,7 +60,6 @@ public:
   int line_number_ = 0;
   int color_intensity_threshold_ = 5;
   Eigen::Vector3d adjust_euler_angle_;
-  Calibration(const std::string &image_file, const std::string &pcd_file) {}
   Calibration(const std::string &image_file, const std::string &pcd_file,
               const std::string &calib_config_file);
   void loadImgAndPointcloud(const std::string bag_path,
@@ -210,9 +209,9 @@ Calibration::Calibration(const std::string &image_file,
     exit(-1);
   }
 
-  // Eigen::Vector3d lwh(50, 50, 30);
-  // Eigen::Vector3d origin(0, -25, -10);
-  // std::vector<VoxelGrid> voxel_list;
+  Eigen::Vector3d lwh(50, 50, 30);
+  Eigen::Vector3d origin(0, -25, -10);
+  std::vector<VoxelGrid> voxel_list;
   std::unordered_map<VOXEL_LOC, Voxel *> voxel_map;
   initVoxel(raw_lidar_cloud_, voxel_size_, voxel_map);
   LiDAREdgeExtraction(voxel_map, ransac_dis_threshold_, plane_size_threshold_,
@@ -303,9 +302,9 @@ void Calibration::colorCloud(
   }
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   cv::Mat camera_matrix =
       (cv::Mat_<double>(3, 3) << fx_, 0.0, cx_, 0.0, fy_, cy_, 0.0, 0.0, 1.0);
   cv::Mat distortion_coeff =
@@ -409,9 +408,9 @@ void Calibration::projection(
   std::vector<float> intensity_list;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   for (size_t i = 0; i < lidar_cloud->size(); i++) {
     pcl::PointXYZI point_3d = lidar_cloud->points[i];
     float depth =
@@ -534,22 +533,22 @@ cv::Mat Calibration::getConnectImg(
     const int dis_threshold,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &rgb_edge_cloud,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &depth_edge_cloud) {
-      cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
-      cv::cvtColor(image_,connect_img, CV_GRAY2BGR);
-      pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
-          new pcl::search::KdTree<pcl::PointXYZ>());
-      pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
-          pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-      pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
-          pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-      kdtree->setInputCloud(rgb_edge_cloud);
-      tree_cloud = rgb_edge_cloud;
-      for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
-        cv::Point2d p2(depth_edge_cloud->points[i].x,
-                      -depth_edge_cloud->points[i].y);
-        if (checkFov(p2)) {
-          pcl::PointXYZ p = depth_edge_cloud->points[i];
-          search_cloud->points.push_back(p);
+    cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
+    cv::cvtColor(image_,connect_img, CV_GRAY2BGR);
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
+        new pcl::search::KdTree<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
+        pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
+        pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    kdtree->setInputCloud(rgb_edge_cloud);
+    tree_cloud = rgb_edge_cloud;
+    for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
+      cv::Point2d p2(depth_edge_cloud->points[i].x,
+                    -depth_edge_cloud->points[i].y);
+      if (checkFov(p2)) {
+        pcl::PointXYZ p = depth_edge_cloud->points[i];
+        search_cloud->points.push_back(p);
     }
   }
 
@@ -950,7 +949,7 @@ void Calibration::calcLine(
                   plane_list[plane_index1].cloud.makeShared());
               kdtree2->setInputCloud(
                   plane_list[plane_index2].cloud.makeShared());
-              for (float inc = 0; inc <= length; inc += 0.005) {
+              for (float inc = 0; inc <= length; inc += 0.01) {
                 pcl::PointXYZI p;
                 p.x = p1.x + (p2.x - p1.x) * inc / length;
                 p.y = p1.y + (p2.y - p1.y) * inc / length;
@@ -1028,9 +1027,9 @@ void Calibration::buildVPnp(
   std::vector<cv::Point3d> pts_3d;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
 
   for (size_t i = 0; i < lidar_line_cloud_3d->size(); i++) {
     pcl::PointXYZI point_3d = lidar_line_cloud_3d->points[i];
@@ -1211,9 +1210,9 @@ void Calibration::buildPnp(
   std::vector<cv::Point3f> pts_3d;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   for (size_t i = 0; i < lidar_line_cloud_3d->size(); i++) {
     pcl::PointXYZI point_3d = lidar_line_cloud_3d->points[i];
     pts_3d.emplace_back(cv::Point3f(point_3d.x, point_3d.y, point_3d.z));
@@ -1456,9 +1455,9 @@ void Calibration::calcResidual(const Vector6d &extrinsic_params,
                               extrinsic_params[2]);
   Eigen::Matrix3d rotation_matrix;
   rotation_matrix =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   Eigen::Vector3d transation(extrinsic_params[3], extrinsic_params[4],
                              extrinsic_params[5]);
   for (size_t i = 0; i < vpnp_list.size(); i++) {
@@ -1523,9 +1522,9 @@ void Calibration::calcCovarance(const Vector6d &extrinsic_params,
                                 const float degree_inc,
                                 Eigen::Matrix2f &covarance) {
   Eigen::Matrix3d rotation;
-  rotation = Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+  rotation = Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
              Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-             Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+             Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   Eigen::Vector3d transation(extrinsic_params[3], extrinsic_params[4],
                              extrinsic_params[5]);
   float fx = fx_;
