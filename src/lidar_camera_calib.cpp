@@ -142,9 +142,9 @@ void roughCalib(Calibration &calibra, Vector6d &calib_params,
   for (int n = 0; n < 2; n++) {
     for (int round = 0; round < 3; round++) {
       Eigen::Matrix3d rot;
-      rot = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
+      rot = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitX()) *
             Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
-            Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
+            Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitZ());
       // std::cout << "init rot" << rot << std::endl;
       float min_cost = 1000;
       for (int iter = 0; iter < max_iter; iter++) {
@@ -153,13 +153,13 @@ void roughCalib(Calibration &calibra, Vector6d &calib_params,
                               pow(-1, iter) * int(iter / 2) * search_resolution;
         Eigen::Matrix3d adjust_rotation_matrix;
         adjust_rotation_matrix =
-            Eigen::AngleAxisd(adjust_euler[0], Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(adjust_euler[0], Eigen::Vector3d::UnitX()) *
             Eigen::AngleAxisd(adjust_euler[1], Eigen::Vector3d::UnitY()) *
-            Eigen::AngleAxisd(adjust_euler[2], Eigen::Vector3d::UnitX());
+            Eigen::AngleAxisd(adjust_euler[2], Eigen::Vector3d::UnitZ());
         Eigen::Matrix3d test_rot = rot * adjust_rotation_matrix;
         // std::cout << "adjust_rotation_matrix " << adjust_rotation_matrix
         //           << std::endl;
-        Eigen::Vector3d test_euler = test_rot.eulerAngles(2, 1, 0);
+        Eigen::Vector3d test_euler = test_rot.eulerAngles(0, 1, 2);
         // std::cout << "test euler: " << test_euler << std::endl;
         Vector6d test_params;
         test_params << test_euler[0], test_euler[1], test_euler[2],
@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
   calibra.p2_ = dist_coeffs[3];
   calibra.k3_ = dist_coeffs[4];
   Eigen::Vector3d init_euler_angle =
-      calibra.init_rotation_matrix_.eulerAngles(2, 1, 0);
+      calibra.init_rotation_matrix_.eulerAngles(0, 1, 2);
   Eigen::Vector3d init_transation = calibra.init_translation_vector_;
 
   Vector6d calib_params;
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
   std::cout << "Initial translation:"
             << calibra.init_translation_vector_.transpose() << std::endl;
   bool use_vpnp = true;
-  Eigen::Vector3d euler = R.eulerAngles(2, 1, 0);
+  Eigen::Vector3d euler = R.eulerAngles(0, 1, 2);
   calib_params[0] = euler[0];
   calib_params[1] = euler[1];
   calib_params[2] = euler[2];
@@ -291,9 +291,9 @@ int main(int argc, char **argv) {
       Eigen::Vector3d euler_angle(calib_params[0], calib_params[1],
                                   calib_params[2]);
       Eigen::Matrix3d opt_init_R;
-      opt_init_R = Eigen::AngleAxisd(euler_angle[0], Eigen::Vector3d::UnitZ()) *
+      opt_init_R = Eigen::AngleAxisd(euler_angle[0], Eigen::Vector3d::UnitX()) *
                    Eigen::AngleAxisd(euler_angle[1], Eigen::Vector3d::UnitY()) *
-                   Eigen::AngleAxisd(euler_angle[2], Eigen::Vector3d::UnitX());
+                   Eigen::AngleAxisd(euler_angle[2], Eigen::Vector3d::UnitZ());
       Eigen::Quaterniond q(opt_init_R);
       Eigen::Vector3d ori_t = T;
       double ext[7];
@@ -336,7 +336,7 @@ int main(int argc, char **argv) {
       ceres::Solve(options, &problem, &summary);
       std::cout << summary.BriefReport() << std::endl;
       Eigen::Matrix3d rot = m_q.toRotationMatrix();
-      euler_angle = rot.eulerAngles(2, 1, 0);
+      euler_angle = rot.eulerAngles(0, 1, 2);
       // std::cout << rot << std::endl;
       // std::cout << m_t << std::endl;
       calib_params[0] = euler_angle[0];
@@ -369,9 +369,9 @@ int main(int argc, char **argv) {
   ros::Rate loop(0.5);
   // roughCalib(calibra, calib_params, DEG2RAD(0.01), 20);
 
-  R = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitZ()) *
+  R = Eigen::AngleAxisd(calib_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(calib_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(calib_params[2], Eigen::Vector3d::UnitZ());
   std::ofstream outfile(result_file);
   for (int i = 0; i < 3; i++) {
     outfile << R(i, 0) << "," << R(i, 1) << "," << R(i, 2) << "," << T[i]
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
   init_rotation << 0, -1.0, 0, 0, 0, -1.0, 1, 0, 0;
   Eigen::Matrix3d adjust_rotation;
   adjust_rotation = init_rotation.inverse() * R;
-  Eigen::Vector3d adjust_euler = adjust_rotation.eulerAngles(2, 1, 0);
+  Eigen::Vector3d adjust_euler = adjust_rotation.eulerAngles(0, 1, 2);
   // outfile << RAD2DEG(adjust_euler[0]) << "," << RAD2DEG(adjust_euler[1]) <<
   // ","
   //         << RAD2DEG(adjust_euler[2]) << "," << 0 << "," << 0 << "," << 0

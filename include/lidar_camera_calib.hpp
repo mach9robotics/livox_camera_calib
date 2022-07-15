@@ -302,9 +302,9 @@ void Calibration::colorCloud(
   }
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   cv::Mat camera_matrix =
       (cv::Mat_<double>(3, 3) << fx_, 0.0, cx_, 0.0, fy_, cy_, 0.0, 0.0, 1.0);
   cv::Mat distortion_coeff =
@@ -407,9 +407,9 @@ void Calibration::projection(
   std::vector<float> intensity_list;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   for (size_t i = 0; i < lidar_cloud->size(); i++) {
     pcl::PointXYZI point_3d = lidar_cloud->points[i];
     float depth =
@@ -1025,9 +1025,9 @@ void Calibration::buildVPnp(
   std::vector<cv::Point3d> pts_3d;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
 
   for (size_t i = 0; i < lidar_line_cloud_3d->size(); i++) {
     pcl::PointXYZI point_3d = lidar_line_cloud_3d->points[i];
@@ -1208,9 +1208,9 @@ void Calibration::buildPnp(
   std::vector<cv::Point3f> pts_3d;
   Eigen::AngleAxisd rotation_vector3;
   rotation_vector3 =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   for (size_t i = 0; i < lidar_line_cloud_3d->size(); i++) {
     pcl::PointXYZI point_3d = lidar_line_cloud_3d->points[i];
     pts_3d.emplace_back(cv::Point3f(point_3d.x, point_3d.y, point_3d.z));
@@ -1453,9 +1453,9 @@ void Calibration::calcResidual(const Vector6d &extrinsic_params,
                               extrinsic_params[2]);
   Eigen::Matrix3d rotation_matrix;
   rotation_matrix =
-      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+      Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   Eigen::Vector3d transation(extrinsic_params[3], extrinsic_params[4],
                              extrinsic_params[5]);
   for (size_t i = 0; i < vpnp_list.size(); i++) {
@@ -1520,9 +1520,9 @@ void Calibration::calcCovarance(const Vector6d &extrinsic_params,
                                 const float degree_inc,
                                 Eigen::Matrix2f &covarance) {
   Eigen::Matrix3d rotation;
-  rotation = Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitZ()) *
+  rotation = Eigen::AngleAxisd(extrinsic_params[0], Eigen::Vector3d::UnitX()) *
              Eigen::AngleAxisd(extrinsic_params[1], Eigen::Vector3d::UnitY()) *
-             Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitX());
+             Eigen::AngleAxisd(extrinsic_params[2], Eigen::Vector3d::UnitZ());
   Eigen::Vector3d transation(extrinsic_params[3], extrinsic_params[4],
                              extrinsic_params[5]);
   float fx = fx_;
