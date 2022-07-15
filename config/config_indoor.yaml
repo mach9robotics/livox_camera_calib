@@ -14,16 +14,16 @@ ExtrinsicMat: !!opencv-matrix
          0.0,   0.0,    0.0,    1.0]
 # Params for Canny Edge Extraction
 
-Canny.gray_threshold: 10
-Canny.len_threshold: 200
+Canny_gray_threshold: 10
+Canny_len_threshold: 200
 
 # Params for Voxel Cutting & Plane Fitting & Edge Extraction
-Voxel.size: 0.5
-Voxel.down_sample_size: 0.02
-Plane.min_points_size: 30
-Plane.normal_theta_min: 45
-Plane.normal_theta_max: 135
-Plane.max_size: 8
-Ransac.dis_threshold: 0.02
-Edge.min_dis_threshold: 0.03
-Edge.max_dis_threshold: 0.06
+Voxel_size: 0.5
+Voxel_down_sample_size: 0.02
+Plane_min_points_size: 30
+Plane_normal_theta_min: 45
+Plane_normal_theta_max: 135
+Plane_max_size: 8
+Ransac_dis_threshold: 0.02
+Edge_min_dis_threshold: 0.03
+Edge_max_dis_threshold: 0.06
