@@ -24,6 +24,8 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 
 
 using namespace std;
@@ -285,6 +287,20 @@ void CalibTune::save_config_file(string& file_path) {
     fs.release();
 }
 
+string find_pcd_path(string& image_path) {
+    vector<string> words_0;
+    boost::split(words_0, image_path, boost::is_any_of("/"), boost::token_compress_on);
+    words_0[words_0.size()-3] = "pcd";
+    string pcd_path;
+    for (auto w:words_0) {
+        pcd_path += w;
+        if (w!=words_0[words_0.size()-1]) pcd_path += "/";
+    }
+    pcd_path.replace(pcd_path.size()-3,3,"pcd");
+    return pcd_path;
+}
+
+
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "calib_tune");
@@ -293,10 +309,6 @@ int main(int argc, char *argv[]) {
     string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
     string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
-    // ROS_INFO("Complete initial image and point cloud edge extractions!");
-    // cb.align_edges();
-    // ROS_INFO("Complete initial residual image!");
-    // cb.save_config_file(save_path);
 
     ros::Rate loop_rate(30);
     while (ros::ok())
