@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
       ceres::Solve(options, &problem, &summary);
       std::cout << summary.BriefReport() << std::endl;
       Eigen::Matrix3d rot = m_q.toRotationMatrix();
-      auto euler_angle = rot.eulerAngles(0, 1, 2);
+      Eigen::Vector3d euler_angle = rot.eulerAngles(0, 1, 2);
       // std::cout << rot << std::endl;
       // std::cout << m_t << std::endl;
       calib_params[0] = euler_angle[0];
