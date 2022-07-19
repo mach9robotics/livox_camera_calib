@@ -156,7 +156,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
     // save config file
     if (this->m_prev_save != config.save){
         this->save_config_file(this->m_save_path);
-        this->m_prev_exec = config.save;
+        this->m_prev_save = config.save;
     }
     if (this->m_prev_load != config.load_input){
         if (m_changes.size()!=0) {
@@ -380,9 +380,9 @@ void CalibTune::load_cloud(string& pcd_path) {
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "calib_tune");
-    string image_file = "/tmp/mach9/auto_mlcc/image/front/0.bmp";
-    string pcd_file = "/tmp/mach9/auto_mlcc/pcd/front/0.pcd";
-    string calib_config_file = "/home/jason/map_ws/src/livox_camera_calib/config/config_outdoor.yaml";
+    string image_file = "/tmp/mach9/auto_mlcc/image/left/0.bmp";
+    string pcd_file = "/tmp/mach9/auto_mlcc/pcd/left/0.pcd";
+    string calib_config_file = "/home/m9-calib/box_ws/src/auto_mlcc/config/config_good.yaml";
     string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
 

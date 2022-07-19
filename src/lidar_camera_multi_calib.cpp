@@ -404,19 +404,19 @@ int main(int argc, char **argv) {
   // ","
   //         << RAD2DEG(adjust_euler[2]) << "," << 0 << "," << 0 << "," << 0
   //         << std::endl;
-  ros::shutdown();
-  // while (ros::ok()) {
-  //   sensor_msgs::PointCloud2 pub_cloud;
-  //   pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
-  //       new pcl::PointCloud<pcl::PointXYZRGB>);
-  //   calibs[0].colorCloud(calib_params, 5, calibs[0].image_,
-  //                        calibs[0].raw_lidar_cloud_, rgb_cloud);
-  //   pcl::toROSMsg(*rgb_cloud, pub_cloud);
-  //   pub_cloud.header.frame_id = "livox";
-  //   calibs[0].rgb_cloud_pub_.publish(pub_cloud);
-  //   // std::cout << "push enter to publish again" << std::endl;
-  //   // getchar();
-  //   /* code */
-  // }
+  // ros::shutdown();
+  while (ros::ok()) {
+    sensor_msgs::PointCloud2 pub_cloud;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(
+        new pcl::PointCloud<pcl::PointXYZRGB>);
+    calibs[0].colorCloud(calib_params, 5, calibs[0].image_,
+                         calibs[0].raw_lidar_cloud_, rgb_cloud);
+    pcl::toROSMsg(*rgb_cloud, pub_cloud);
+    pub_cloud.header.frame_id = "livox";
+    calibs[0].rgb_cloud_pub_.publish(pub_cloud);
+    std::cout << "push enter to publish again" << std::endl;
+    getchar();
+    /* code */
+  }
   return 0;
 }
