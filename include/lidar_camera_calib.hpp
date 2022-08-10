@@ -260,22 +260,22 @@ bool Calibration::loadCalibConfig(const std::string &config_file) {
       init_extrinsic_.at<double>(2, 1), init_extrinsic_.at<double>(2, 2);
   init_translation_vector_ << init_extrinsic_.at<double>(0, 3),
       init_extrinsic_.at<double>(1, 3), init_extrinsic_.at<double>(2, 3);
-  rgb_canny_threshold_ = fSettings["Canny.gray_threshold"];
-  rgb_edge_minLen_ = fSettings["Canny.len_threshold"];
-  voxel_size_ = fSettings["Voxel.size"];
-  down_sample_size_ = fSettings["Voxel.down_sample_size"];
-  plane_size_threshold_ = fSettings["Plane.min_points_size"];
-  plane_max_size_ = fSettings["Plane.max_size"];
-  ransac_dis_threshold_ = fSettings["Ransac.dis_threshold"];
-  min_line_dis_threshold_ = fSettings["Edge.min_dis_threshold"];
-  max_line_dis_threshold_ = fSettings["Edge.max_dis_threshold"];
-  theta_min_ = fSettings["Plane.normal_theta_min"];
-  theta_max_ = fSettings["Plane.normal_theta_max"];
+  rgb_canny_threshold_ = fSettings["Canny_gray_threshold"];
+  rgb_edge_minLen_ = fSettings["Canny_len_threshold"];
+  voxel_size_ = fSettings["Voxel_size"];
+  down_sample_size_ = fSettings["Voxel_down_sample_size"];
+  plane_size_threshold_ = fSettings["Plane_min_points_size"];
+  plane_max_size_ = fSettings["Plane_max_size"];
+  ransac_dis_threshold_ = fSettings["Ransac_dis_threshold"];
+  min_line_dis_threshold_ = fSettings["Edge_min_dis_threshold"];
+  max_line_dis_threshold_ = fSettings["Edge_max_dis_threshold"];
+  theta_min_ = fSettings["Plane_normal_theta_min"];
+  theta_max_ = fSettings["Plane_normal_theta_max"];
   theta_min_ = cos(DEG2RAD(theta_min_));
   theta_max_ = cos(DEG2RAD(theta_max_));
   direction_theta_min_ = cos(DEG2RAD(30.0));
   direction_theta_max_ = cos(DEG2RAD(150.0));
-  color_intensity_threshold_ = fSettings["Color.intensity_threshold"];
+  color_intensity_threshold_ = fSettings["Color_intensity_threshold"];
   return true;
 };
 
@@ -354,11 +354,12 @@ void Calibration::edgeDetector(
     const int &canny_threshold, const int &edge_threshold,
     const cv::Mat &src_img, cv::Mat &edge_img,
     pcl::PointCloud<pcl::PointXYZ>::Ptr &edge_cloud) {
+  cv::Mat blur_img = cv::Mat::zeros(height_, width_, CV_8UC1);
   int gaussian_size = 5;
-  cv::GaussianBlur(src_img, src_img, cv::Size(gaussian_size, gaussian_size), 0,
+  cv::GaussianBlur(src_img, blur_img, cv::Size(gaussian_size, gaussian_size), 0,
                    0);
   cv::Mat canny_result = cv::Mat::zeros(height_, width_, CV_8UC1);
-  cv::Canny(src_img, canny_result, canny_threshold, canny_threshold * 3, 3,
+  cv::Canny(blur_img, canny_result, canny_threshold, canny_threshold * 3, 3,
             true);
   std::vector<std::vector<cv::Point>> contours;
   std::vector<cv::Vec4i> hierarchy;
@@ -532,21 +533,22 @@ cv::Mat Calibration::getConnectImg(
     const int dis_threshold,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &rgb_edge_cloud,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &depth_edge_cloud) {
-  cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
-      new pcl::search::KdTree<pcl::PointXYZ>());
-  pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
-      pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
-      pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
-  kdtree->setInputCloud(rgb_edge_cloud);
-  tree_cloud = rgb_edge_cloud;
-  for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
-    cv::Point2d p2(depth_edge_cloud->points[i].x,
-                   -depth_edge_cloud->points[i].y);
-    if (checkFov(p2)) {
-      pcl::PointXYZ p = depth_edge_cloud->points[i];
-      search_cloud->points.push_back(p);
+    cv::Mat connect_img = cv::Mat::zeros(height_, width_, CV_8UC3);
+    cv::cvtColor(image_,connect_img, CV_GRAY2BGR);
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(
+        new pcl::search::KdTree<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr search_cloud =
+        pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud =
+        pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    kdtree->setInputCloud(rgb_edge_cloud);
+    tree_cloud = rgb_edge_cloud;
+    for (size_t i = 0; i < depth_edge_cloud->points.size(); i++) {
+      cv::Point2d p2(depth_edge_cloud->points[i].x,
+                    -depth_edge_cloud->points[i].y);
+      if (checkFov(p2)) {
+        pcl::PointXYZ p = depth_edge_cloud->points[i];
+        search_cloud->points.push_back(p);
     }
   }
 
