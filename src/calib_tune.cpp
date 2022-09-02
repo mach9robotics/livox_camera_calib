@@ -31,14 +31,20 @@
 using namespace std;
 using namespace cv;
 
-class CalibTune: public Calibration {
+class CalibTune: public Calibration 
+{
 public:
 
     CalibTune(const std::string &image_file,
               const std::string &pcd_file,
               const std::string &calib_config_file) : m_it(m_nh),
               Calibration(image_file, pcd_file, calib_config_file)
-        {
+    {
+        // define paths
+        m_image_path = image_file;
+        m_pcd_path = pcd_file;
+        m_config_path = calib_config_file;
+
         // setup publisher
         m_image_pub = m_it.advertise("/edge_align_image",1);
         // init image message & setup image header
@@ -64,10 +70,10 @@ public:
         k3_ = m_dist_coeffs[4];
 
         align_edges();
-        }
+    }
     void align_edges();
     void save_config_file(string& file_path);
-    string find_pcd_path(string& image_path);
+    // string find_pcd_path(string& image_path);
     void load_image(string& image_path);
     void load_cloud(string& pcd_path);
 
@@ -75,7 +81,6 @@ private:
     void dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level);
 
 private:
-    string m_save_path;
     bool m_prev_exec = false;
     bool m_prev_save = false;
     bool m_prev_load = false;
@@ -95,18 +100,22 @@ private:
     string m_image_path;
     string m_pcd_path;
     string m_config_path;
-
+    string m_save_path;
 };
 
+string find_pcd_path(string& image_path);
 
-void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level){
+void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t level)
+{
     // ROS_INFO("Level: %i", level);
-    if (level == 2 || level == 5) {
+    if (level == 2 || level == 5) 
+    {
         m_changes.insert(level);
     }
     // set values
     this->m_save_path = config.save_path;
-    if (level == 1){
+    if (level == 1)
+    {
         this->rgb_canny_threshold_ = config.grey_threshold;
         this->rgb_edge_minLen_ = config.len_threshold;
         ROS_INFO_STREAM("start image edge extraction");
@@ -117,10 +126,12 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         ROS_INFO_STREAM("complete image edge extraction");
         this->align_edges();
     }
-    if (level == 2){
+    if (level == 2)
+    {
         this->voxel_size_ = config.voxel_size;
     }
-    if (level == 3){
+    if (level == 3)
+    {
         this->m_translation[0] = config.translation_x;
         this->m_translation[1] = config.translation_y;
         this->m_translation[2] = config.translation_z;
@@ -129,17 +140,20 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_rotation[2] = config.rotation_z;
         this->align_edges();
     }
-    if (level == 4){
+    if (level == 4)
+    {
         this->m_save_path = config.save_path;
     }
-    if (level == 5){
+    if (level == 5)
+    {
         this->m_image_path = config.image_path;
         this->m_config_path = config.config_path;
-        this->m_pcd_path = this->find_pcd_path(this->m_image_path);
+        this->m_pcd_path = find_pcd_path(this->m_image_path);
     } 
 
     // execuate and show residual image
-    if (this->m_prev_exec != config.execuate){
+    if (this->m_prev_exec != config.execuate)
+    {
         if (m_changes.size()!=0) {
             if (m_changes.find(2) != m_changes.end()) {
                 ROS_INFO_STREAM("start point cloud edge extraction");
@@ -153,12 +167,9 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         }
         this->m_prev_exec = config.execuate;
     }
-    // save config file
-    if (this->m_prev_save != config.save){
-        this->save_config_file(this->m_save_path);
-        this->m_prev_save = config.save;
-    }
-    if (this->m_prev_load != config.load_input){
+    // load new image and pcd
+    if (this->m_prev_load != config.load_input && config.image_path != "")
+    {
         if (m_changes.size()!=0) {
             if (m_changes.find(5) != m_changes.end()) {
                 this->loadCalibConfig(this->m_config_path);
@@ -181,9 +192,16 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         }
         this->m_prev_load = config.load_input;
     }
+    // save config file
+    if (this->m_prev_save != config.save && config.save_path != "")
+    {
+        this->save_config_file(this->m_save_path);
+        this->m_prev_save = config.save;
+    }
 }
 
-void CalibTune::align_edges(){
+void CalibTune::align_edges()
+{
     // parse and store 6d pose to calib_params
     Eigen::Vector3d init_euler_angle = this->m_rotation;
     Eigen::Vector3d init_translation = this->m_translation;
@@ -325,7 +343,8 @@ void CalibTune::save_config_file(string& file_path) {
 
 
 
-string CalibTune::find_pcd_path(string& image_path) {
+string find_pcd_path(string& image_path) 
+{
     vector<string> words_0;
     boost::split(words_0, image_path, boost::is_any_of("/"), boost::token_compress_on);
     words_0[words_0.size()-3] = "pcd";
@@ -338,7 +357,8 @@ string CalibTune::find_pcd_path(string& image_path) {
     return pcd_path;
 }
 
-void CalibTune::load_image(string& image_path) {
+void CalibTune::load_image(string& image_path) 
+{
     image_ = cv::imread(image_path, cv::IMREAD_UNCHANGED);
     if (!image_.data) {
         std::string msg = "Can not load image from " + image_path;
@@ -362,7 +382,8 @@ void CalibTune::load_image(string& image_path) {
     }
 }
 
-void CalibTune::load_cloud(string& pcd_path) {
+void CalibTune::load_cloud(string& pcd_path) 
+{
     raw_lidar_cloud_ =
         pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
     ROS_INFO_STREAM("Loading point cloud from pcd file.");
@@ -378,12 +399,34 @@ void CalibTune::load_cloud(string& pcd_path) {
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) 
+{
     ros::init(argc, argv, "calib_tune");
-    string image_file = "/tmp/mach9/auto_mlcc/image/left/0.bmp";
-    string pcd_file = "/tmp/mach9/auto_mlcc/pcd/left/0.pcd";
-    string calib_config_file = "/home/m9-calib/box_ws/src/auto_mlcc/config/config_good.yaml";
-    string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
+    // string image_file = "/tmp/mach9/auto_mlcc/image/left/0.bmp";
+    // string pcd_file = "/tmp/mach9/auto_mlcc/pcd/left/0.pcd";
+    // string calib_config_file = "/home/m9-calib/box_ws/src/auto_mlcc/config/config_good.yaml";
+    // string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
+    string image_file, pcd_file, calib_config_file, save_path, multi_calib_file;
+    // load from ros parameter server
+    ros::NodeHandle nh;
+    nh.getParam("multi_calib_path", multi_calib_file);
+    nh.getParam("image_path", image_file);
+    pcd_file = find_pcd_path(image_file);
+    nh.getParam("calib_config_path", calib_config_file);
+    // check image and pcd file
+    ROS_INFO_STREAM("multi calib file: " << multi_calib_file);
+    if (image_file.empty() || calib_config_file.empty() || multi_calib_file.empty()) 
+    {
+        ROS_ERROR_STREAM("Insuficient arguments, please check your input.");
+        exit(-1);
+    }
+    std::vector<std::string> input_files = {image_file, pcd_file, calib_config_file, multi_calib_file};
+    for (auto file:input_files) {
+        if (!boost::filesystem::exists(file)) {
+            ROS_ERROR_STREAM("File " << file << " does not exist.");
+            exit(-1);
+        }
+    }
     CalibTune cb = CalibTune(image_file, pcd_file, calib_config_file);
 
     ros::Rate loop_rate(30);
