@@ -411,11 +411,12 @@ int main(int argc, char *argv[])
     ros::NodeHandle nh;
     nh.getParam("multi_calib_path", multi_calib_file);
     nh.getParam("image_path", image_file);
-    pcd_file = find_pcd_path(image_file);
+    // pcd_file = find_pcd_path(image_file);
     nh.getParam("calib_config_path", calib_config_file);
+    nh.param<string>("pcd_path", pcd_file, find_pcd_path(image_file));
     // check image and pcd file
     ROS_INFO_STREAM("multi calib file: " << multi_calib_file);
-    if (image_file.empty() || calib_config_file.empty() || multi_calib_file.empty()) 
+    if (image_file.empty() || calib_config_file.empty() || multi_calib_file.empty() || pcd_file.empty()) 
     {
         ROS_ERROR_STREAM("Insuficient arguments, please check your input.");
         exit(-1);
