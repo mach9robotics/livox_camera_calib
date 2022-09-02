@@ -3,7 +3,7 @@
     <arg name = "multi_calib_path"/>
     <arg name = "calib_config_path" default = "$(find auto_mlcc)/config/config_good.yaml"/>
     <arg name = "image_path"/>
-    <arg name = "pcd_path"/>
+    <arg name = "pcd_path" default = ""/>
 
     <rosparam command="load" file="$(arg multi_calib_path)" />
     <param name="calib_config_path" value="$(arg calib_config_path)" type="string"/>

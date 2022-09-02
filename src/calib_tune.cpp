@@ -145,10 +145,16 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_save_path = config.save_path;
     }
     if (level == 5)
-    {
-        this->m_image_path = config.image_path;
-        this->m_config_path = config.config_path;
-        this->m_pcd_path = find_pcd_path(this->m_image_path);
+    {   
+        if (config.config_path != "")
+        {
+            this->m_config_path = config.config_path;
+        }
+        if (config.image_path != "")
+        {
+            this->m_image_path = config.image_path;
+            this->m_pcd_path = find_pcd_path(this->m_image_path);
+        }
     } 
 
     // execuate and show residual image
@@ -168,7 +174,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_prev_exec = config.execuate;
     }
     // load new image and pcd
-    if (this->m_prev_load != config.load_input && config.image_path != "")
+    if (this->m_prev_load != config.load_input && m_image_path != "" && m_config_path != "")
     {
         if (m_changes.size()!=0) {
             if (m_changes.find(5) != m_changes.end()) {
@@ -193,7 +199,7 @@ void CalibTune::dyncfg_cb(livox_camera_calib::CalibTuneConfig &config, uint32_t 
         this->m_prev_load = config.load_input;
     }
     // save config file
-    if (this->m_prev_save != config.save && config.save_path != "")
+    if (this->m_prev_save != config.save && m_save_path != "")
     {
         this->save_config_file(this->m_save_path);
         this->m_prev_save = config.save;
@@ -336,6 +342,7 @@ void CalibTune::save_config_file(string& file_path) {
     fs << "Edge_max_dis_threshold" << 0.06;
     fs << "Color_dense" << 1;
     fs << "Color_intensity_threshold" << 10;
+    fs << "match_dis" << 25.0;
 
     fs.release();
     ROS_INFO_STREAM("Saved config file to " << file_path);
@@ -402,18 +409,17 @@ void CalibTune::load_cloud(string& pcd_path)
 int main(int argc, char *argv[]) 
 {
     ros::init(argc, argv, "calib_tune");
-    // string image_file = "/tmp/mach9/auto_mlcc/image/left/0.bmp";
-    // string pcd_file = "/tmp/mach9/auto_mlcc/pcd/left/0.pcd";
-    // string calib_config_file = "/home/m9-calib/box_ws/src/auto_mlcc/config/config_good.yaml";
-    // string save_path = "/tmp/mach9/auto_mlcc/edge_cfg/updated_cfg.yaml";
     string image_file, pcd_file, calib_config_file, save_path, multi_calib_file;
     // load from ros parameter server
     ros::NodeHandle nh;
     nh.getParam("multi_calib_path", multi_calib_file);
     nh.getParam("image_path", image_file);
-    // pcd_file = find_pcd_path(image_file);
     nh.getParam("calib_config_path", calib_config_file);
-    nh.param<string>("pcd_path", pcd_file, find_pcd_path(image_file));
+    nh.getParam("pcd_path", pcd_file);
+    if (pcd_file == "")
+    {
+        pcd_file = find_pcd_path(image_file);
+    }
     // check image and pcd file
     ROS_INFO_STREAM("multi calib file: " << multi_calib_file);
     if (image_file.empty() || calib_config_file.empty() || multi_calib_file.empty() || pcd_file.empty()) 

@@ -135,8 +135,8 @@ private:
 };
 
 void roughCalib(std::vector<Calibration> &calibs, Vector6d &calib_params,
-                double search_resolution, int max_iter) {
-  float match_dis = 25;
+                double search_resolution, int max_iter, float match_dis) {
+  // float match_dis = match_dis_;
   Eigen::Vector3d fix_adjust_euler(0, 0, 0);
   for (int n = 0; n < 2; n++)
     for (int round = 0; round < 3; round++) {
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
   cv::imshow("Initial extrinsic", init_img);
   cv::waitKey(1000);
   if (use_rough_calib) {
-    roughCalib(calibs, calib_params, DEG2RAD(0.2), 40);
+    roughCalib(calibs, calib_params, DEG2RAD(0.2), 40, calibs[0].match_dis_);
   }
   cv::Mat test_img = calibs[0].getProjectionImg(calib_params);
   cv::imshow("After rough extrinsic", test_img);
