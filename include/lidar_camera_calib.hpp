@@ -60,6 +60,8 @@ public:
   int line_number_ = 0;
   int color_intensity_threshold_ = 5;
   float match_dis_ = 25.0;
+  int match_dis_threshold_min_ = 8;
+  int match_dis_threshold_max_ = 20;
   Eigen::Vector3d adjust_euler_angle_;
   Calibration(const std::string &image_file, const std::string &pcd_file,
               const std::string &calib_config_file);
@@ -278,6 +280,8 @@ bool Calibration::loadCalibConfig(const std::string &config_file) {
   direction_theta_max_ = cos(DEG2RAD(150.0));
   color_intensity_threshold_ = fSettings["Color_intensity_threshold"];
   match_dis_ = fSettings["match_dis"];
+  match_dis_threshold_min_ = fSettings["match_dis_threshold_min"];
+  match_dis_threshold_max_ = fSettings["match_dis_threshold_max"];
 
   return true;
 };

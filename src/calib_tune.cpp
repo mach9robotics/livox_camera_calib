@@ -343,6 +343,8 @@ void CalibTune::save_config_file(string& file_path) {
     fs << "Color_dense" << 1;
     fs << "Color_intensity_threshold" << 10;
     fs << "match_dis" << 25.0;
+    fs << "match_dis_threshold_min" << 8;
+    fs << "match_dis_threshold_max" << 20;
 
     fs.release();
     ROS_INFO_STREAM("Saved config file to " << file_path);
