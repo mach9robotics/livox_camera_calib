@@ -135,8 +135,7 @@ private:
 };
 
 void roughCalib(std::vector<Calibration> &calibs, Vector6d &calib_params,
-                double search_resolution, int max_iter) {
-  float match_dis = 25;
+                double search_resolution, int max_iter, float match_dis) {
   Eigen::Vector3d fix_adjust_euler(0, 0, 0);
   for (int n = 0; n < 2; n++)
     for (int round = 0; round < 3; round++) {
@@ -280,7 +279,7 @@ int main(int argc, char **argv) {
   cv::imshow("Initial extrinsic", init_img);
   cv::waitKey(1000);
   if (use_rough_calib) {
-    roughCalib(calibs, calib_params, DEG2RAD(0.2), 40);
+    roughCalib(calibs, calib_params, DEG2RAD(0.2), 40, calibs[0].match_dis_);
   }
   cv::Mat test_img = calibs[0].getProjectionImg(calib_params);
   cv::imshow("After rough extrinsic", test_img);
@@ -293,7 +292,9 @@ int main(int argc, char **argv) {
   bool opt_flag = true;
 
   // Iteratively reducve the matching distance threshold
-  for (dis_threshold = 20; dis_threshold > 8; dis_threshold -= 1) {
+  for (dis_threshold = calibs[0].match_dis_threshold_max_; dis_threshold >
+   calibs[0].match_dis_threshold_min_; dis_threshold -= 1) 
+   {
     // For each distance, do twice optimization
     for (int cnt = 0; cnt < 2; cnt++) {
       std::cout << "Iteration:" << iter++ << " Dis:" << dis_threshold

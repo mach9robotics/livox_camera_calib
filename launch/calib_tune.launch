@@ -1,7 +1,15 @@
 <launch>
     <arg name = "debug" default = "false"/>
+    <arg name = "multi_calib_path"/>
+    <arg name = "calib_config_path" default = "$(find auto_mlcc)/config/config_good.yaml"/>
+    <arg name = "image_path"/>
+    <arg name = "pcd_path" default = ""/>
 
-    <rosparam command="load" file="/tmp/mach9/auto_mlcc/config/multi_calib_front.yaml" />
+    <rosparam command="load" file="$(arg multi_calib_path)" />
+    <param name="calib_config_path" value="$(arg calib_config_path)" type="string"/>
+    <param name="image_path" value="$(arg image_path)" type="string"/>
+    <param name="multi_calib_path" value="$(arg multi_calib_path)" type="string"/>
+    <param name="pcd_path" value="$(arg pcd_path)" type="string"/>
     
     <node pkg="livox_camera_calib" type="calib_tune" name="calib_tune" output="screen" 
     launch-prefix="xterm -e gdb --args" if = "$(arg debug)"/>
