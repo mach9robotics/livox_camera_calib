@@ -401,6 +401,15 @@ void Calibration::edgeDetector(
   }
   edge_cloud->width = edge_cloud->points.size();
   edge_cloud->height = 1;
+  if (edge_cloud->points.size() == 0)
+  {
+    ROS_WARN_STREAM("No vaild image edge detected!");
+    pcl::PointXYZ p;
+    p.x = 0.0;
+    p.y = 0.0;
+    p.z = 0.0;
+    edge_cloud->points.push_back(p);
+  }
   // cv::imshow("canny result", canny_result);
   // cv::imshow("edge result", edge_img);
   // cv::waitKey();
